@@ -5,6 +5,7 @@ import cors from 'cors';
 import { Server as SocketServer } from 'socket.io';
 import { config } from './config.js';
 import { authRouter } from './routes/auth.js';
+import { registerRoomHandlers } from './rooms/socket.js';
 
 const app = express();
 
@@ -27,10 +28,7 @@ const io = new SocketServer(server, {
   cors: { origin: config.clientOrigin, credentials: true },
 });
 
-io.on('connection', (socket) => {
-  console.log('[socket] connected:', socket.id);
-  socket.on('disconnect', () => console.log('[socket] disconnected:', socket.id));
-});
+registerRoomHandlers(io);
 
 server.listen(config.port, () => {
   console.log(`[server] listening on http://127.0.0.1:${config.port}`);

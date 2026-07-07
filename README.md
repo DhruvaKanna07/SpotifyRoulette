@@ -51,7 +51,12 @@ Then open <http://127.0.0.1:5173>.
   fetches `/me`, top tracks (`long_term`), and owned "Your Top Songs {year}"
   playlists; detects year playlists, builds ranked lists, token refresh, and a
   "what the game sees about you" debug screen with Rescan.
-- ⬜ Phase 2 — Rooms & lobby
+- ✅ **Phase 2 — Rooms & lobby.** Socket.io rooms with short join codes,
+  presence, the players×periods availability grid (a period is playable only
+  when every player owns that year's data), and host settings (mode / period /
+  rounds / timer). In-memory room state; lobby snapshots never leak tracks or
+  tokens. Note: players connect Spotify *before* creating/joining a room (a
+  cleaner variation on the spec's "join then connect").
 - ⬜ Phase 3 — Roulette mode
 - ⬜ Phase 4 — Match-Up mode
 - ⬜ Phase 5 — Polish & edge cases

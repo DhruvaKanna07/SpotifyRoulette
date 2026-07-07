@@ -27,7 +27,7 @@ export default function Callback() {
     }
     api
       .callback(code, state)
-      .then(() => navigate('/me', { replace: true }))
+      .then(() => navigate('/', { replace: true }))
       .catch((err) => setError(err.message));
   }, [params, navigate]);
 

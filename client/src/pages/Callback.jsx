@@ -36,15 +36,15 @@ export default function Callback() {
       {error ? (
         <>
           <div className="text-5xl">😵</div>
-          <p className="text-[--color-bad]">{error}</p>
-          <a href="/" className="text-[--color-accent-2] underline">
+          <p className="text-bad">{error}</p>
+          <a href="/" className="text-accent-2 underline">
             Start over
           </a>
         </>
       ) : (
         <>
           <div className="animate-pulse text-5xl">🎧</div>
-          <p className="text-[--color-ink-dim]">Reading your Spotify…</p>
+          <p className="text-ink-dim">Reading your Spotify…</p>
         </>
       )}
     </main>

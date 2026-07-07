@@ -1,0 +1,21 @@
+# Claude Code local settings
+.claude/settings.local.json
+
+# OS
+.DS_Store
+
+# Environment
+.env
+.env.local
+
+# Editors
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Dependencies (uncomment as needed once the stack is chosen)
+# node_modules/
+# venv/
+# __pycache__/

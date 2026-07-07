@@ -11,6 +11,46 @@ spec, including **hard Spotify API constraints verified for 2026** (dev-mode
 no `preview_url`, etc.). Read it before touching Spotify integration — those
 constraints are real and must not be "simplified" away.
 
+## Current status (resume here)
+
+Built, tested, committed, and pushed to `main` (GitHub: DhruvaKanna07/SpotifyRoulette):
+- **Phase 1 — Solo data pipeline** ✅ (OAuth PKCE, top tracks + year playlists, debug screen)
+- **Phase 2 — Rooms & lobby** ✅ (join codes, presence, availability grid, host settings)
+- **Phase 3 — Roulette mode** ✅ (secret draw, guessing, timer, scoring, reveal, scoreboard)
+
+**Next up: Phase 4 — Match-Up mode** (see `spotify-game-plan.md` §Game modes B).
+Simultaneous, not turn-based: the game picks one rank R (random within a range
+all players have, or host-chosen), pulls **every player's song at rank R**, shows
+them shuffled with the same rank badge, and each player assigns a name to each
+song (full matching, V1 includes your own song as a free point). Score per
+correct assignment; reveal shows the answer key; redraw a different rank if two
+players share a song at R. Default 5 rounds. The lobby already has a "Match-Up"
+mode toggle wired; `game/socket.js` currently rejects it with
+`mode_not_implemented` — that's the hook to build against. Reuse the Room
+container pattern: add a `MatchUpView` and matchup events alongside the roulette
+ones. **Phase 5 — Polish & edge cases** remains after that (onboarding SVG
+stepper, iFrame embed player, animations/sounds, deeper reconnect handling).
+
+Task list (`TaskList`) tracks these six phases if the tools are available.
+
+### Not yet verified in a real browser
+
+The **live multiplayer feel** has never been exercised end-to-end in the browser
+because it needs two OAuth'd Spotify accounts. OAuth works up to Spotify's
+consent screen (verified); completing it requires the user to click **Agree**
+(an authorization grant Claude must not click). Phase 3 logic is proven via a
+27-assertion socket.io integration test instead. If asked to do the live test:
+drive Home → Connect Spotify, hand off the Agree click to the user, then create/
+join a room. A second player needs a different account in a separate browser.
+
+### Working agreement
+
+The user wants **git used for the whole project**: after each meaningful chunk,
+commit with a clean message and `git push origin main`. `.env` (holds the real
+`SPOTIFY_CLIENT_ID`) is gitignored and exists locally — never commit it. Dev
+servers may already be running in the background from a prior session (check
+`curl -s http://127.0.0.1:3001/api/health` before starting new ones).
+
 ## Commands
 
 ```bash

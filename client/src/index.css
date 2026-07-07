@@ -1,0 +1,49 @@
+@import 'tailwindcss';
+
+/* Dark, playful, music-y theme — deliberately NOT Spotify's branding. */
+@theme {
+  --color-bg: #0f0d1a;
+  --color-bg-raised: #1a1728;
+  --color-bg-card: #241f36;
+  --color-ink: #f4f1fb;
+  --color-ink-dim: #a9a1c9;
+  --color-accent: #ff5c8a;
+  --color-accent-2: #7c5cff;
+  --color-good: #3ddc97;
+  --color-bad: #ff6b6b;
+
+  --font-display: 'Poppins', system-ui, -apple-system, sans-serif;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(120% 80% at 50% -10%, #2a1f4d 0%, transparent 55%),
+    var(--color-bg);
+  color: var(--color-ink);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Utility: chunky rounded party-game card. */
+@utility card {
+  background: var(--color-bg-card);
+  border: 1px solid color-mix(in srgb, var(--color-ink) 8%, transparent);
+  border-radius: 1.25rem;
+  box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.6);
+}

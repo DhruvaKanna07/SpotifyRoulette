@@ -15,7 +15,12 @@
 # Logs
 *.log
 
-# Dependencies (uncomment as needed once the stack is chosen)
-# node_modules/
-# venv/
-# __pycache__/
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+client/dist/
+
+# Vite cache
+.vite/

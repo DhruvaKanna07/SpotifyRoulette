@@ -3,6 +3,7 @@
 import * as cookie from 'cookie';
 import { getSessionFromToken } from '../sessions.js';
 import { serializeRoom } from './room.js';
+import { attachGameHandlers, sendCurrentGameState } from '../game/socket.js';
 import {
   getRoom,
   createRoom,
@@ -35,14 +36,18 @@ export function registerRoomHandlers(io) {
     }
     socket.data.session = session;
 
-    // If this session was already in a room (e.g. page refresh), rejoin it.
+    // If this session was already in a room (e.g. page refresh), rejoin it and
+    // restore whatever is currently on screen (lobby or an in-progress game).
     if (session.roomCode) {
       const { room } = joinRoom(session.roomCode, session);
       if (room) {
         socket.join(room.code);
         broadcastRoom(io, room);
+        sendCurrentGameState(socket, room);
       }
     }
+
+    attachGameHandlers(io, socket, session);
 
     socket.on('room:create', (_payload, ack) => {
       // Leave any previous room first.

@@ -1,19 +1,6 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useState } from 'react';
+import Avatar from '../components/Avatar.jsx';
 import { getSocket } from '../socket.js';
-
-function Avatar({ player, size = 'md' }) {
-  const dim = size === 'sm' ? 'h-8 w-8 text-base' : 'h-11 w-11 text-xl';
-  return (
-    <div
-      className={`grid ${dim} shrink-0 place-items-center rounded-full`}
-      style={{ background: player.avatar.color }}
-      title={player.displayName}
-    >
-      {player.avatar.emoji}
-    </div>
-  );
-}
 
 function PlayerList({ room, meId }) {
   return (
@@ -65,7 +52,7 @@ function AvailabilityGrid({ room }) {
           <tbody>
             {room.players.map((p) => (
               <tr key={p.id} className="border-t border-white/5">
-                <td className="flex items-center gap-2 p-1.5">
+                <td className="p-1.5">
                   <Avatar player={p} size="sm" />
                 </td>
                 {room.periods.map((per) => (
@@ -127,15 +114,16 @@ function Settings({ room, isHost, update }) {
               disabled={!isHost}
               onClick={() => update({ mode: key })}
               className={`rounded-xl px-3 py-2 text-sm font-bold transition ${
-                settings.mode === key
-                  ? 'bg-accent-2 text-white'
-                  : 'bg-bg-raised text-ink-dim'
+                settings.mode === key ? 'bg-accent-2 text-white' : 'bg-bg-raised text-ink-dim'
               } disabled:opacity-60`}
             >
               {label}
             </button>
           ))}
         </div>
+        {settings.mode === 'matchup' && (
+          <p className="mt-2 text-xs text-accent">Match-Up arrives in Phase 4.</p>
+        )}
       </div>
 
       <div>
@@ -150,13 +138,9 @@ function Settings({ room, isHost, update }) {
                 disabled={!isHost || !per.availableForAll}
                 onClick={() => update({ period: value })}
                 className={`rounded-full px-4 py-1.5 text-sm font-bold transition ${
-                  selected
-                    ? 'bg-accent text-white'
-                    : 'bg-bg-raised text-ink-dim'
+                  selected ? 'bg-accent text-white' : 'bg-bg-raised text-ink-dim'
                 } disabled:opacity-40`}
-                title={
-                  per.availableForAll ? '' : 'Not everyone has this period yet'
-                }
+                title={per.availableForAll ? '' : 'Not everyone has this period yet'}
               >
                 {per.label}
                 {!per.availableForAll && ' 🔒'}
@@ -189,99 +173,40 @@ function Settings({ room, isHost, update }) {
   );
 }
 
-export default function Lobby() {
-  const { code } = useParams();
-  const navigate = useNavigate();
-  const [room, setRoom] = useState(null);
-  const [meId, setMeId] = useState(null);
-  const [error, setError] = useState(null);
+export default function LobbyView({ room, meId, onLeave }) {
   const [copied, setCopied] = useState(false);
-  const [notice, setNotice] = useState(null);
+  const [error, setError] = useState(null);
+  const isHost = room.hostPlayerId === meId;
+  const matchupNotReady = room.settings.mode === 'matchup';
 
-  useEffect(() => {
-    const socket = getSocket();
+  const update = (patch) => getSocket().emit('room:updateSettings', patch);
 
-    const onState = (state) => {
-      setRoom(state);
-      setError(null);
-    };
-    const onError = (e) => {
-      if (e.code === 'not_authenticated') navigate('/', { replace: true });
-    };
-    socket.on('room:state', onState);
-    socket.on('room:error', onError);
-
-    // Ensure we're joined (covers direct navigation / refresh). Idempotent.
-    const join = () =>
-      socket.emit('room:join', { code }, (res) => {
-        if (res?.ok) setMeId(res.playerId ?? null);
-        else setError(res?.error ?? 'join_failed');
-      });
-    if (socket.connected) join();
-    else socket.once('connect', join);
-
-    return () => {
-      socket.off('room:state', onState);
-      socket.off('room:error', onError);
-    };
-  }, [code, navigate]);
-
-  function update(patch) {
-    getSocket().emit('room:updateSettings', patch);
-  }
-
-  function leave() {
-    getSocket().emit('room:leave', {}, () => navigate('/', { replace: true }));
+  function startGame() {
+    setError(null);
+    getSocket().emit('game:start', {}, (res) => {
+      if (!res?.ok) setError(START_ERRORS[res?.error] ?? 'Could not start the game.');
+    });
   }
 
   function copyCode() {
-    navigator.clipboard?.writeText(code).then(() => {
+    navigator.clipboard?.writeText(room.code).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     });
   }
-
-  if (error) {
-    return (
-      <main className="flex min-h-dvh flex-col items-center justify-center gap-4 px-6 text-center">
-        <div className="text-5xl">🚪</div>
-        <p className="text-bad">
-          {ERRORS[error] ?? 'Something went wrong joining this room.'}
-        </p>
-        <a href="/" className="text-accent-2 underline">
-          Back home
-        </a>
-      </main>
-    );
-  }
-  if (!room) {
-    return (
-      <main className="flex min-h-dvh items-center justify-center px-6">
-        <p className="animate-pulse text-ink-dim">Joining room {code}…</p>
-      </main>
-    );
-  }
-
-  const isHost = room.hostPlayerId === meId;
 
   return (
     <main className="mx-auto max-w-md space-y-4 px-4 py-6">
       <header className="card flex items-center justify-between p-4">
         <div>
           <p className="text-xs uppercase tracking-wide text-ink-dim">Join code</p>
-          <button
-            onClick={copyCode}
-            className="text-3xl font-extrabold tracking-[0.2em]"
-            title="Tap to copy"
-          >
+          <button onClick={copyCode} className="text-3xl font-extrabold tracking-[0.2em]">
             {room.code}
           </button>
-          <p className="text-xs text-ink-dim">
-            {copied ? 'Copied!' : 'Tap the code to copy'}
-          </p>
+          <p className="text-xs text-ink-dim">{copied ? 'Copied!' : 'Tap the code to copy'}</p>
         </div>
         <button
-          onClick={leave}
+          onClick={onLeave}
           className="rounded-full bg-bg-raised px-4 py-2 text-sm font-bold text-ink-dim"
         >
           Leave
@@ -295,8 +220,8 @@ export default function Lobby() {
       {isHost ? (
         <div className="space-y-2">
           <button
-            disabled={!room.canStart}
-            onClick={() => setNotice('Game start arrives in Phase 3 🎯')}
+            disabled={!room.canStart || matchupNotReady}
+            onClick={startGame}
             className="w-full rounded-full bg-good px-6 py-4 text-lg font-extrabold text-[#08301f] transition active:scale-95 disabled:opacity-40"
           >
             Start game
@@ -306,20 +231,18 @@ export default function Lobby() {
               Need 2+ connected players and a period everyone has.
             </p>
           )}
-          {notice && <p className="text-center text-sm text-accent">{notice}</p>}
+          {error && <p className="text-center text-sm text-bad">{error}</p>}
         </div>
       ) : (
-        <p className="text-center text-sm text-ink-dim">
-          Waiting for the host to start…
-        </p>
+        <p className="text-center text-sm text-ink-dim">Waiting for the host to start…</p>
       )}
     </main>
   );
 }
 
-const ERRORS = {
-  room_not_found: "That room code doesn't exist.",
-  room_full: 'That room is full (5 players max).',
-  game_in_progress: 'That game already started.',
-  account_already_in_room: 'That Spotify account is already in the room.',
+const START_ERRORS = {
+  not_host: 'Only the host can start.',
+  cannot_start: 'Need 2+ connected players and a shared period.',
+  mode_not_implemented: 'That mode is not ready yet.',
+  no_drawable_songs: 'Not enough unique songs to play. Try another period.',
 };

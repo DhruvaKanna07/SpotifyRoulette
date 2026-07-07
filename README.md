@@ -57,6 +57,12 @@ Then open <http://127.0.0.1:5173>.
   rounds / timer). In-memory room state; lobby snapshots never leak tracks or
   tokens. Note: players connect Spotify *before* creating/joining a room (a
   cleaner variation on the spec's "join then connect").
-- ⬜ Phase 3 — Roulette mode
+- ✅ **Phase 3 — Roulette mode.** Turn-based rounds: the server secretly draws
+  one player + one of their songs (balanced ownership, no repeats, duplicates
+  skipped), everyone else guesses whose it is against a countdown, then a reveal
+  shows the answer, who got it right, and a running scoreboard. Correct guess =
+  100 + speed bonus; the owner earns +25 per wrong guess. The secret owner and
+  others' guesses are emitted per-viewer and never leaked (unit + socket
+  integration tested). Host advances rounds; final scoreboard with Play Again.
 - ⬜ Phase 4 — Match-Up mode
 - ⬜ Phase 5 — Polish & edge cases

@@ -68,11 +68,35 @@ Phase 5 done so far:
   round, Match-Up reveals when the hold-out disconnects, needsReauth surfaces);
   script deleted after.
 
-**Next up:** the only substantive thing left is the **live two-account browser
-playtest** (blocked on the human "Agree" click — see below). Everything in the
-build compiles and the app shell renders clean; the in-game views (embed/sounds/
-animations) still have not been exercised end-to-end because that needs two
-OAuth'd Spotify accounts.
+**Verified live this session (real account, single player):** full OAuth now
+completes through the callback (not just to the consent screen) — the `/setup`
+and `/me` pages rendered against a real logged-in Spotify session with a clean
+console. **Auto-detection of "(2)"-suffixed copies confirmed working** (e.g.
+`Your Top Songs 2025 (2)` → all of 2022–2025 detected). So the solo data
+pipeline is proven end-to-end in a real browser now.
+
+**Resume here — open items, in priority order:**
+1. **Live two-account playtest of the actual game** (roulette + match-up, incl.
+   embed/sounds/animations). Still not done — needs a *second* OAuth'd Spotify
+   account in a separate browser, and the human "Agree" click Claude can't do.
+   Drive: reconnect Spotify → create room → hand off Agree → second account joins.
+2. **Decision pending (asked, not answered): easier friend-testing setup.** Two
+   options offered — (a) add `express.static` so the whole app serves from the
+   single Node port (cleanest for a Cloudflare/ngrok tunnel + future deploy), or
+   (b) just add `server.allowedHosts` to `vite.config.js` for a quick tunnel of
+   the dev server. See the "test with a friend" notes: the 3 Spotify must-dos are
+   owner-has-Premium, allowlist each friend's email under User Management, and
+   register the exact redirect URI.
+3. **Optional follow-up (offered, not answered):** a "Return to your active room"
+   button on Home when the session still has a `roomCode` (needs the client to
+   learn its room — e.g. include `roomCode` in `/me`, or the `sr_room`
+   sessionStorage value already set by the lobby).
+
+**Gotcha that bit us:** all state is in-memory, so editing any *server* file
+triggers the `node --watch` restart and **wipes every session and room** — a
+mid-playtest login vanishes. Batch server edits, and expect to reconnect Spotify
+after them. (Item 2a would also make it easy to run a stable prebuilt server that
+doesn't restart on edits.)
 
 Phase 4 shape (as built): `game/matchup.js` is the pure engine (mirrors
 `roulette.js` — `startMatchGame`/`drawMatchRound`/`recordSubmission`/
@@ -92,15 +116,21 @@ No timer in Match-Up. Proven via a 23-assertion socket.io integration test
 
 Task list (`TaskList`) tracks these six phases if the tools are available.
 
-### Not yet verified in a real browser
+### Verified in a real browser vs. not
 
-The **live multiplayer feel** has never been exercised end-to-end in the browser
-because it needs two OAuth'd Spotify accounts. OAuth works up to Spotify's
-consent screen (verified); completing it requires the user to click **Agree**
-(an authorization grant Claude must not click). Phase 3 logic is proven via a
-27-assertion socket.io integration test instead. If asked to do the live test:
-drive Home → Connect Spotify, hand off the Agree click to the user, then create/
-join a room. A second player needs a different account in a separate browser.
+**Now verified (single account, real browser):** full OAuth through the callback,
+library build, `/setup` + `/me` pages, and auto-detection of copied year
+playlists (see "Resume here" above).
+
+**Still NOT verified — the live multiplayer feel:** two players in a room actually
+playing roulette/match-up, and the in-game polish (embed player, sounds,
+animations) firing during real rounds. This needs a *second* OAuth'd Spotify
+account in a separate browser, plus the human **Agree** click (an authorization
+grant Claude must not perform). Game logic is otherwise proven via socket.io
+integration tests (Phase 3: 27 assertions; Phase 4: 23; Phase 5 robustness: 7 —
+all standalone scripts, deleted after). To do the live test: reconnect Spotify,
+hand off the Agree click, create a room, then have the second account join with
+the code from another browser/device.
 
 ### Working agreement
 

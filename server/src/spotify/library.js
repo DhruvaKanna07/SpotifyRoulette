@@ -17,12 +17,27 @@ function extractYear(name) {
   return match ? Number(match[1]) : null;
 }
 
+// Refresh the token, flagging the player as needing re-login if Spotify rejects
+// the refresh token (e.g. revoked). Throws a typed error so callers can react
+// without killing a room the player is already in.
+async function refreshOrFlag(player) {
+  try {
+    const refreshed = await refreshAccessToken(player.spotify.refreshToken);
+    Object.assign(player.spotify, refreshed);
+  } catch (err) {
+    player.needsReauth = true;
+    const wrapped = new Error('spotify_reauth_required');
+    wrapped.code = 'reauth_required';
+    wrapped.cause = err;
+    throw wrapped;
+  }
+}
+
 // Refresh the access token if it's expired (or about to be, 30s skew).
 export async function ensureFreshToken(player) {
   const { spotify } = player;
   if (spotify.expiresAt && Date.now() < spotify.expiresAt - 30_000) return;
-  const refreshed = await refreshAccessToken(spotify.refreshToken);
-  Object.assign(spotify, refreshed);
+  await refreshOrFlag(player);
 }
 
 // Run a Spotify API call; on 401 refresh the token once and retry.
@@ -32,8 +47,7 @@ async function withFreshToken(player, fn) {
     return await fn(player.spotify.accessToken);
   } catch (err) {
     if (err.status === 401) {
-      const refreshed = await refreshAccessToken(player.spotify.refreshToken);
-      Object.assign(player.spotify, refreshed);
+      await refreshOrFlag(player);
       return fn(player.spotify.accessToken);
     }
     throw err;
@@ -105,6 +119,9 @@ export async function buildLibrary(player) {
   for (const { playlistId, year } of detected) {
     years.set(year, await fetchYearRanked(player, playlistId));
   }
+
+  // A clean scan means the tokens are healthy again.
+  player.needsReauth = false;
 
   return {
     profile: { id: profile.id, displayName: profile.display_name },

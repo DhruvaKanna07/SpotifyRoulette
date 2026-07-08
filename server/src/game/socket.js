@@ -71,6 +71,19 @@ function doReveal(io, room) {
   io.to(room.code).emit('game:reveal', reveal);
 }
 
+// A player dropped mid-game. Since completion checks only count *connected*
+// players, a disconnect can be the event that finishes a round — re-evaluate so
+// the game never stalls waiting on someone who left. (Matters most for Match-Up,
+// which has no timer to force a reveal.)
+export function handleGameDisconnect(io, room) {
+  if (!room) return;
+  if (room.phase === 'in_round' && allGuessed(room)) {
+    doReveal(io, room);
+  } else if (room.phase === 'matchup_round' && allSubmitted(room)) {
+    doMatchReveal(io, room);
+  }
+}
+
 // Send whatever is currently on screen to a single (re)connecting socket.
 export function sendCurrentGameState(socket, room) {
   if (!room) return;

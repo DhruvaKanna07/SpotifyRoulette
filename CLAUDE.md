@@ -18,9 +18,34 @@ Built, tested, committed, and pushed to `main` (GitHub: DhruvaKanna07/SpotifyRou
 - **Phase 2 — Rooms & lobby** ✅ (join codes, presence, availability grid, host settings)
 - **Phase 3 — Roulette mode** ✅ (secret draw, guessing, timer, scoring, reveal, scoreboard)
 - **Phase 4 — Match-Up mode** ✅ (shared-rank draw with dupe-redraw, matching board, scoring, reveal answer key, multi-round)
+- **Phase 5 — Polish (partial)** 🚧 — done: onboarding SVG stepper + deep reconnect/edge-case robustness. **Remaining: iFrame embed player, animations, sounds.**
 
-**Next up: Phase 5 — Polish & edge cases** (onboarding SVG stepper, iFrame embed
-player, animations/sounds, deeper reconnect handling).
+Phase 5 done so far:
+- **Onboarding stepper** (`pages/Setup.jsx`, route `/setup`): 4-step illustrated
+  guide (brand-neutral inline-SVG phone mocks, no Spotify branding) for copying a
+  "Your Top Songs {year}" Wrapped playlist into an owned copy, with a year
+  selector and a Rescan that reports which years were newly detected. Entry
+  points from Home (connected) and the `/me` debug page (which lost its old
+  text hint).
+- **Deep robustness:** (1) **reconnect bug fixed** — `joinRoom` checked the
+  `phase !== 'lobby'` gate *before* the known-player rejoin branch, so a mid-game
+  phone refresh failed to restore; the rejoin check now runs first (new players
+  are still blocked mid-game). (2) **no-stall on disconnect** — `handleGameDisconnect`
+  (in `game/socket.js`, called from the room `disconnect` handler) re-checks
+  round completion when a player drops, so a game never hangs on someone who
+  left. Critical for Match-Up, which has no timer. (3) **needs-reauth** — a failed
+  token refresh sets `session.needsReauth` (via `refreshOrFlag` in `library.js`,
+  cleared on a clean scan) instead of throwing/killing the room; surfaced as a
+  per-player `needsReauth` in `serializeRoom` → a ⚠️ badge + a "Reconnect Spotify"
+  banner in the lobby. Players keep playing from their cached library.
+- Proven via a 7-assertion socket.io integration test (reconnect restores the
+  round, Match-Up reveals when the hold-out disconnects, needsReauth surfaces);
+  script deleted after.
+
+**Next up: finish Phase 5** — iFrame embed player (`https://open.spotify.com/embed/track/{id}`
+on the round/reveal screens; the only way to hear a song since dev-mode has no
+`preview_url`), then animations (score count-ups, reveal/winner transitions) and
+optional sounds.
 
 Phase 4 shape (as built): `game/matchup.js` is the pure engine (mirrors
 `roulette.js` — `startMatchGame`/`drawMatchRound`/`recordSubmission`/

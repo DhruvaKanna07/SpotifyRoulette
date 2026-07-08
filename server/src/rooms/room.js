@@ -92,6 +92,9 @@ export function serializeRoom(room) {
       avatar: p.avatar,
       connected: p.connected,
       isHost: p.id === room.hostPlayerId,
+      // Token refresh failed on this player's last scan — they can still play
+      // from their cached library, but should reconnect Spotify.
+      needsReauth: Boolean(p.session?.needsReauth),
       // which of the room's periods this player has (for the availability grid)
       has: Object.fromEntries(
         availability.map((a) => [a.key, perPlayerPeriods.get(p.id).has(a.key)]),

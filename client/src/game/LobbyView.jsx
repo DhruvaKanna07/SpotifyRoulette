@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Avatar from '../components/Avatar.jsx';
 import { getSocket } from '../socket.js';
+import { api } from '../api.js';
 
 function PlayerList({ room, meId }) {
   return (
@@ -16,6 +17,11 @@ function PlayerList({ room, meId }) {
               {p.displayName}
               {p.id === meId && <span className="text-ink-dim"> (you)</span>}
             </span>
+            {p.needsReauth && (
+              <span title="Spotify needs reconnecting" className="text-sm">
+                ⚠️
+              </span>
+            )}
             {p.isHost && <span title="Host">👑</span>}
             <span
               className={`h-2.5 w-2.5 rounded-full ${p.connected ? 'bg-good' : 'bg-white/25'}`}
@@ -179,8 +185,18 @@ export default function LobbyView({ room, meId, onLeave }) {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState(null);
   const isHost = room.hostPlayerId === meId;
+  const mePlayer = room.players.find((p) => p.id === meId);
 
   const update = (patch) => getSocket().emit('room:updateSettings', patch);
+
+  async function reconnectSpotify() {
+    try {
+      const { authorizeUrl } = await api.login();
+      window.location.href = authorizeUrl;
+    } catch {
+      setError('Could not start Spotify reconnect.');
+    }
+  }
 
   function startGame() {
     setError(null);
@@ -213,6 +229,22 @@ export default function LobbyView({ room, meId, onLeave }) {
           Leave
         </button>
       </header>
+
+      {mePlayer?.needsReauth && (
+        <section className="card border-bad/40 bg-bad/10 p-4">
+          <p className="text-sm font-bold text-ink">⚠️ Spotify needs reconnecting</p>
+          <p className="mt-1 text-xs text-ink-dim">
+            We can't refresh your Spotify session. You can still play from your last
+            scan, but reconnect to stay current.
+          </p>
+          <button
+            onClick={reconnectSpotify}
+            className="mt-3 rounded-full bg-accent-2 px-4 py-2 text-sm font-bold text-white transition active:scale-95"
+          >
+            Reconnect Spotify
+          </button>
+        </section>
+      )}
 
       <PlayerList room={room} meId={meId} />
       <AvailabilityGrid room={room} />

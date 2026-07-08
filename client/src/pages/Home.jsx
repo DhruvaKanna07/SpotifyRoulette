@@ -119,9 +119,14 @@ export default function Home() {
       {error && <p className="text-sm text-bad">{error}</p>}
 
       {me && (
-        <a href="/me" className="text-sm text-ink-dim underline">
-          View my Spotify data
-        </a>
+        <div className="flex gap-4 text-sm text-ink-dim">
+          <a href="/setup" className="underline">
+            Add my Wrapped years
+          </a>
+          <a href="/me" className="underline">
+            View my Spotify data
+          </a>
+        </div>
       )}
     </main>
   );

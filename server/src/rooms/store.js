@@ -70,16 +70,18 @@ export function createRoom(session) {
 export function joinRoom(code, session) {
   const room = getRoom(code);
   if (!room) return { error: 'room_not_found' };
-  if (room.phase !== 'lobby') return { error: 'game_in_progress' };
 
+  // A known player may ALWAYS rejoin — including mid-game after a phone refresh.
+  // (This check must precede the phase gate below, or reconnect breaks.)
   const existing = room.players.find((p) => p.id === session.id);
   if (existing) {
-    // Rejoin (e.g. after a refresh): just mark connected.
     existing.connected = true;
     session.roomCode = room.code;
     return { room };
   }
 
+  // New players can only join a room that's still in the lobby.
+  if (room.phase !== 'lobby') return { error: 'game_in_progress' };
   if (room.players.length >= MAX_PLAYERS) return { error: 'room_full' };
   // Reject a second login from the same Spotify account.
   const dupAccount =

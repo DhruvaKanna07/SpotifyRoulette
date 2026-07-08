@@ -3,7 +3,11 @@
 import * as cookie from 'cookie';
 import { getSessionFromToken } from '../sessions.js';
 import { serializeRoom } from './room.js';
-import { attachGameHandlers, sendCurrentGameState } from '../game/socket.js';
+import {
+  attachGameHandlers,
+  sendCurrentGameState,
+  handleGameDisconnect,
+} from '../game/socket.js';
 import {
   getRoom,
   createRoom,
@@ -92,6 +96,8 @@ export function registerRoomHandlers(io) {
 
     socket.on('disconnect', () => {
       const room = markDisconnected(session);
+      // If a game is in progress, a drop may be the event that completes a round.
+      handleGameDisconnect(io, room);
       broadcastRoom(io, room);
     });
   });

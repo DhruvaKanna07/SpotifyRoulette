@@ -137,16 +137,21 @@ export default function Debug() {
         </button>
       </header>
 
-      {years.length === 0 && (
-        <div className="card border-accent/30 bg-accent/5 p-4 text-sm text-ink-dim">
-          <p className="mb-1 font-bold text-ink">Want to play by year?</p>
-          <p>
-            In Spotify, search <b>“Your Top Songs 2024”</b>, open the ⋯ menu →{' '}
-            <b>Add to other playlist</b> → <b>New playlist</b> (keep the name), then
-            tap <b>Rescan</b>. A guided version of this comes later.
-          </p>
-        </div>
-      )}
+      <div className="card border-accent/30 bg-accent/5 p-4 text-sm text-ink-dim">
+        <p className="mb-1 font-bold text-ink">
+          {years.length === 0 ? 'Want to play by year?' : 'Add more years'}
+        </p>
+        <p className="mb-3">
+          Copy your “Your Top Songs” Wrapped playlists into playlists you own, and
+          the game can quiz your group by year — not just all-time.
+        </p>
+        <button
+          onClick={() => navigate('/setup')}
+          className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-white transition active:scale-95"
+        >
+          Guided setup →
+        </button>
+      </div>
 
       <TrackList title="All Time" tracks={library.allTime} label="All Time" />
 

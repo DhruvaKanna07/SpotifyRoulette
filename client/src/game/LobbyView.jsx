@@ -122,7 +122,9 @@ function Settings({ room, isHost, update }) {
           ))}
         </div>
         {settings.mode === 'matchup' && (
-          <p className="mt-2 text-xs text-accent">Match-Up arrives in Phase 4.</p>
+          <p className="mt-2 text-xs text-ink-dim">
+            Everyone's song at the same rank, shuffled — match each to a player.
+          </p>
         )}
       </div>
 
@@ -177,7 +179,6 @@ export default function LobbyView({ room, meId, onLeave }) {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState(null);
   const isHost = room.hostPlayerId === meId;
-  const matchupNotReady = room.settings.mode === 'matchup';
 
   const update = (patch) => getSocket().emit('room:updateSettings', patch);
 
@@ -220,7 +221,7 @@ export default function LobbyView({ room, meId, onLeave }) {
       {isHost ? (
         <div className="space-y-2">
           <button
-            disabled={!room.canStart || matchupNotReady}
+            disabled={!room.canStart}
             onClick={startGame}
             className="w-full rounded-full bg-good px-6 py-4 text-lg font-extrabold text-[#08301f] transition active:scale-95 disabled:opacity-40"
           >
@@ -245,4 +246,5 @@ const START_ERRORS = {
   cannot_start: 'Need 2+ connected players and a shared period.',
   mode_not_implemented: 'That mode is not ready yet.',
   no_drawable_songs: 'Not enough unique songs to play. Try another period.',
+  no_drawable_ranks: 'Not enough shared ranks to match. Try another period.',
 };

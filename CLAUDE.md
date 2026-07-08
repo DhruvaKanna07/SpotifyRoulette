@@ -17,19 +17,26 @@ Built, tested, committed, and pushed to `main` (GitHub: DhruvaKanna07/SpotifyRou
 - **Phase 1 — Solo data pipeline** ✅ (OAuth PKCE, top tracks + year playlists, debug screen)
 - **Phase 2 — Rooms & lobby** ✅ (join codes, presence, availability grid, host settings)
 - **Phase 3 — Roulette mode** ✅ (secret draw, guessing, timer, scoring, reveal, scoreboard)
+- **Phase 4 — Match-Up mode** ✅ (shared-rank draw with dupe-redraw, matching board, scoring, reveal answer key, multi-round)
 
-**Next up: Phase 4 — Match-Up mode** (see `spotify-game-plan.md` §Game modes B).
-Simultaneous, not turn-based: the game picks one rank R (random within a range
-all players have, or host-chosen), pulls **every player's song at rank R**, shows
-them shuffled with the same rank badge, and each player assigns a name to each
-song (full matching, V1 includes your own song as a free point). Score per
-correct assignment; reveal shows the answer key; redraw a different rank if two
-players share a song at R. Default 5 rounds. The lobby already has a "Match-Up"
-mode toggle wired; `game/socket.js` currently rejects it with
-`mode_not_implemented` — that's the hook to build against. Reuse the Room
-container pattern: add a `MatchUpView` and matchup events alongside the roulette
-ones. **Phase 5 — Polish & edge cases** remains after that (onboarding SVG
-stepper, iFrame embed player, animations/sounds, deeper reconnect handling).
+**Next up: Phase 5 — Polish & edge cases** (onboarding SVG stepper, iFrame embed
+player, animations/sounds, deeper reconnect handling).
+
+Phase 4 shape (as built): `game/matchup.js` is the pure engine (mirrors
+`roulette.js` — `startMatchGame`/`drawMatchRound`/`recordSubmission`/
+`allSubmitted`/`revealMatch`/`advanceMatch` + serializers). Picks one rank R
+within `min(list lengths)` that no two players share (skip/redraw on dupes),
+pulls every player's song at R, shuffles into `songs:[{cardId,ownerId,track}]`
+(ownerId **secret** — never in the round payload). Each player submits a full
+bijection matching (`matchup:submit {assignment: {cardId: playerId}}`, validated
+server-side); auto-reveal when all connected players submit, plus a host-only
+`matchup:reveal` fallback. `matchup:next` advances (host, in reveal). Rounds are
+capped to the number of distinct playable ranks (`room.matchRounds`). New client
+events `game:matchRound` (per-socket, privacy-preserving) / `game:matchReveal`
+(broadcast, includes answer key + per-player results) drive `MatchUpView` /
+`MatchRevealView`; `game:ended` + `game:playAgain` are shared with roulette.
+No timer in Match-Up. Proven via a 23-assertion socket.io integration test
+(same throwaway-script pattern as Phase 3, deleted after).
 
 Task list (`TaskList`) tracks these six phases if the tools are available.
 

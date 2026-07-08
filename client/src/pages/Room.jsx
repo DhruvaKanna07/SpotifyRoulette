@@ -5,6 +5,8 @@ import LobbyView from '../game/LobbyView.jsx';
 import RoundView from '../game/RoundView.jsx';
 import RevealView from '../game/RevealView.jsx';
 import FinalView from '../game/FinalView.jsx';
+import MatchUpView from '../game/MatchUpView.jsx';
+import MatchRevealView from '../game/MatchRevealView.jsx';
 
 export default function Room() {
   const { code } = useParams();
@@ -13,6 +15,8 @@ export default function Room() {
   const [meId, setMeId] = useState(null);
   const [round, setRound] = useState(null);
   const [reveal, setReveal] = useState(null);
+  const [matchRound, setMatchRound] = useState(null);
+  const [matchReveal, setMatchReveal] = useState(null);
   const [final, setFinal] = useState(null);
   const [stage, setStage] = useState('loading');
   const [error, setError] = useState(null);
@@ -27,6 +31,8 @@ export default function Room() {
         setStage('lobby');
         setRound(null);
         setReveal(null);
+        setMatchRound(null);
+        setMatchReveal(null);
         setFinal(null);
       }
     };
@@ -39,6 +45,15 @@ export default function Room() {
       setReveal(r);
       setStage('reveal');
     };
+    const onMatchRound = (r) => {
+      setMatchRound(r);
+      setMatchReveal(null);
+      setStage('matchRound');
+    };
+    const onMatchReveal = (r) => {
+      setMatchReveal(r);
+      setStage('matchReveal');
+    };
     const onEnded = (f) => {
       setFinal(f);
       setStage('final');
@@ -50,6 +65,8 @@ export default function Room() {
     socket.on('room:state', onRoomState);
     socket.on('game:round', onRound);
     socket.on('game:reveal', onReveal);
+    socket.on('game:matchRound', onMatchRound);
+    socket.on('game:matchReveal', onMatchReveal);
     socket.on('game:ended', onEnded);
     socket.on('room:error', onErr);
 
@@ -65,6 +82,8 @@ export default function Room() {
       socket.off('room:state', onRoomState);
       socket.off('game:round', onRound);
       socket.off('game:reveal', onReveal);
+      socket.off('game:matchRound', onMatchRound);
+      socket.off('game:matchReveal', onMatchReveal);
       socket.off('game:ended', onEnded);
       socket.off('room:error', onErr);
     };
@@ -73,6 +92,8 @@ export default function Room() {
   const isHost = room?.hostPlayerId === meId;
   const onGuess = (playerId) => getSocket().emit('game:guess', { guessPlayerId: playerId });
   const onNext = () => getSocket().emit('game:next', {});
+  const onMatchSubmit = (assignment) => getSocket().emit('matchup:submit', { assignment });
+  const onMatchNext = () => getSocket().emit('matchup:next', {});
   const onPlayAgain = () => getSocket().emit('game:playAgain', {});
   const onLeave = () =>
     getSocket().emit('room:leave', {}, () => navigate('/', { replace: true }));
@@ -92,6 +113,14 @@ export default function Room() {
   }
   if (stage === 'reveal' && reveal) {
     return <RevealView reveal={reveal} meId={meId} isHost={isHost} onNext={onNext} />;
+  }
+  if (stage === 'matchRound' && matchRound) {
+    return <MatchUpView round={matchRound} meId={meId} onSubmit={onMatchSubmit} />;
+  }
+  if (stage === 'matchReveal' && matchReveal) {
+    return (
+      <MatchRevealView reveal={matchReveal} meId={meId} isHost={isHost} onNext={onMatchNext} />
+    );
   }
   if (stage === 'final' && final) {
     return (

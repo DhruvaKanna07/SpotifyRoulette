@@ -167,6 +167,10 @@ export function resetToLobby(room) {
   room.dupTrackIds = null;
   room.usedTrackIds = new Set();
   room.roundIndex = -1;
+  // Match-Up per-game state (mode-agnostic reset to lobby).
+  room.currentMatch = null;
+  room.usedRanks = null;
+  room.matchRounds = null;
 }
 
 // --- Serialization (client-safe) -------------------------------------------

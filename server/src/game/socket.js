@@ -77,13 +77,14 @@ function botDelay() {
   return 700 + Math.random() * 1900; // feel human-ish, well under a 30s timer
 }
 
-// Each bot that isn't the round owner makes a random guess after a short delay.
+// Each bot makes a random guess after a short delay (owner included — everyone
+// guesses now). A bot never simply picks itself: it guesses among the others.
 function scheduleBotGuesses(io, room) {
   const round = room.currentRound;
   if (!round) return;
   const idx = round.index;
   for (const p of room.players) {
-    if (!p.isBot || p.id === round.ownerId) continue;
+    if (!p.isBot) continue;
     setTimeout(() => {
       const r = room.currentRound;
       if (!r || r.index !== idx || r.revealed || r.guesses.has(p.id)) return;

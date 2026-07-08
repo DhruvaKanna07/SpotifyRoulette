@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { getSocket } from '../socket.js';
+import { SHOW_PLAYLISTS } from '../flags.js';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -118,7 +119,7 @@ export default function Home() {
 
       {error && <p className="text-sm text-bad">{error}</p>}
 
-      {me && (
+      {me && SHOW_PLAYLISTS && (
         <div className="flex gap-4 text-sm text-ink-dim">
           <a href="/setup" className="underline">
             Add my Wrapped years

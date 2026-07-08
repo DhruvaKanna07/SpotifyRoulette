@@ -17,6 +17,12 @@ export const config = {
   sessionSecret: process.env.SESSION_SECRET ?? 'dev_insecure_secret',
   // Dev-only conveniences (test bots, etc.). Off in production.
   devMode: process.env.NODE_ENV !== 'production',
+  // Spotify user ids allowed to use dev features (test bots), regardless of
+  // environment. Defaults to the owner's account; override via env if needed.
+  devSpotifyUserIds: (process.env.DEV_SPOTIFY_USER_IDS ?? '02i8dglcphxxgwdwg8rcqf6e5')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean),
   spotify: {
     clientId: required('SPOTIFY_CLIENT_ID'),
     redirectUri: required('REDIRECT_URI', 'http://127.0.0.1:5173/callback'),
@@ -26,3 +32,9 @@ export const config = {
     apiBase: 'https://api.spotify.com/v1',
   },
 };
+
+// Is this session's Spotify account allowed to use dev features (test bots)?
+export function isDevUser(session) {
+  const id = session?.spotify?.spotifyUserId;
+  return Boolean(id) && config.devSpotifyUserIds.includes(id);
+}

@@ -2,7 +2,7 @@
 // during the Spotify OAuth flow (Phase 1), so a socket == a known player.
 import * as cookie from 'cookie';
 import { getSessionFromToken } from '../sessions.js';
-import { config } from '../config.js';
+import { isDevUser } from '../config.js';
 import { serializeRoom } from './room.js';
 import {
   attachGameHandlers,
@@ -96,9 +96,9 @@ export function registerRoomHandlers(io) {
       broadcastRoom(io, room);
     });
 
-    // Dev-only: fill the room with auto-playing test bots (host, lobby only).
+    // Dev-only: fill the room with auto-playing test bots (owner account only).
     socket.on('dev:addBots', ({ count = 1 } = {}, ack) => {
-      if (!config.devMode) return ack?.({ ok: false, error: 'not_dev' });
+      if (!isDevUser(session)) return ack?.({ ok: false, error: 'not_dev' });
       const room = getRoom(session.roomCode);
       if (!room) return ack?.({ ok: false, error: 'not_in_room' });
       if (room.hostPlayerId !== session.id) return ack?.({ ok: false, error: 'not_host' });

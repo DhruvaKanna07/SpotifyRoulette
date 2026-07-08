@@ -1,5 +1,6 @@
 // Room/Player domain helpers: avatars, availability computation, and the
 // client-safe serialization of lobby state (never leaks track data).
+import { isDevUser } from '../config.js';
 
 // Bold, distinct per-player identities (max 5 players per room).
 export const AVATARS = [
@@ -93,6 +94,7 @@ export function serializeRoom(room) {
       connected: p.connected,
       isHost: p.id === room.hostPlayerId,
       isBot: Boolean(p.isBot),
+      isDev: isDevUser(p.session), // may use dev tools (test bots)
       // Token refresh failed on this player's last scan — they can still play
       // from their cached library, but should reconnect Spotify.
       needsReauth: Boolean(p.session?.needsReauth),

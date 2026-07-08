@@ -55,8 +55,9 @@ function CountdownRing({ deadline, timerSec }) {
 
 export default function RoundView({ round, meId, onGuess }) {
   const { track } = round;
-  const others = round.players.filter((p) => p.id !== meId);
-  const totalGuessers = round.players.length - 1;
+  // Everyone guesses — including for their own song — and can pick any player.
+  const options = round.players;
+  const totalGuessers = round.players.length;
 
   const guess = (playerId) => {
     unlock();
@@ -76,11 +77,20 @@ export default function RoundView({ round, meId, onGuess }) {
         <CountdownRing deadline={round.deadline} timerSec={round.timerSec} />
       </header>
 
-      <section key={round.index} className="card animate-fade-up overflow-hidden">
+      <section className="card overflow-hidden">
+        {/* Drop-in fade for the album cover, re-triggered each round via key. */}
         {track.albumArtUrl ? (
-          <img src={track.albumArtUrl} alt="" className="aspect-square w-full object-cover" />
+          <img
+            key={round.index}
+            src={track.albumArtUrl}
+            alt=""
+            className="animate-drop-in aspect-square w-full object-cover"
+          />
         ) : (
-          <div className="grid aspect-square w-full place-items-center bg-bg-raised text-6xl">
+          <div
+            key={round.index}
+            className="animate-drop-in grid aspect-square w-full place-items-center bg-bg-raised text-6xl"
+          >
             🎵
           </div>
         )}
@@ -96,18 +106,7 @@ export default function RoundView({ round, meId, onGuess }) {
         </div>
       </section>
 
-      {round.youAreOwner ? (
-        <div className="mt-6 flex flex-1 flex-col items-center justify-center gap-3 text-center">
-          <div className="text-5xl">🤫</div>
-          <p className="text-lg font-bold">This is your song!</p>
-          <p className="text-ink-dim">
-            Sit tight — everyone's guessing who it belongs to.
-          </p>
-          <p className="text-sm text-ink-dim">
-            {round.guessedIds.length}/{totalGuessers} locked in
-          </p>
-        </div>
-      ) : round.yourGuess ? (
+      {round.yourGuess ? (
         <div className="mt-6 flex flex-1 flex-col items-center justify-center gap-3 text-center">
           <div className="text-4xl">🔒</div>
           <p className="text-lg font-bold">Locked in!</p>
@@ -120,14 +119,17 @@ export default function RoundView({ round, meId, onGuess }) {
         <div className="mt-6">
           <p className="mb-3 text-center font-bold">Whose song is this?</p>
           <div className="grid grid-cols-2 gap-3">
-            {others.map((p) => (
+            {options.map((p) => (
               <button
                 key={p.id}
                 onClick={() => guess(p.id)}
                 className="flex items-center gap-3 rounded-2xl bg-bg-card p-3 transition active:scale-95"
               >
                 <Avatar player={p} />
-                <span className="truncate font-bold">{p.displayName}</span>
+                <span className="truncate font-bold">
+                  {p.displayName}
+                  {p.id === meId && <span className="text-ink-dim"> (you)</span>}
+                </span>
               </button>
             ))}
           </div>

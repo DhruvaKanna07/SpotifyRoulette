@@ -89,11 +89,11 @@ export function drawRound(room) {
   return room.currentRound;
 }
 
-// Record a guess. Only non-owners may guess, once, before reveal.
+// Record a guess. Anyone (including the song's owner) may guess once, before
+// reveal — a player can pick any player, themselves included.
 export function recordGuess(room, guesserId, guessPlayerId) {
   const round = room.currentRound;
   if (!round || round.revealed) return { ok: false, error: 'no_active_round' };
-  if (guesserId === round.ownerId) return { ok: false, error: 'owner_cannot_guess' };
   if (round.guesses.has(guesserId)) return { ok: false, error: 'already_guessed' };
   if (!room.players.some((p) => p.id === guessPlayerId)) {
     return { ok: false, error: 'invalid_target' };
@@ -106,13 +106,12 @@ export function recordGuess(room, guesserId, guessPlayerId) {
   return { ok: true };
 }
 
-// Have all connected non-owners guessed? (Used to reveal early.)
+// Have all connected players guessed? (Used to reveal early.) The owner now
+// guesses too, so everyone connected is expected.
 export function allGuessed(room) {
   const round = room.currentRound;
   if (!round) return false;
-  const expected = room.players.filter(
-    (p) => p.id !== round.ownerId && p.connected,
-  );
+  const expected = room.players.filter((p) => p.connected);
   return expected.length > 0 && expected.every((p) => round.guesses.has(p.id));
 }
 

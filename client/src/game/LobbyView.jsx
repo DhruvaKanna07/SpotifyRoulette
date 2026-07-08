@@ -5,6 +5,7 @@ import MuteButton from '../components/MuteButton.jsx';
 import { getSocket } from '../socket.js';
 import { api } from '../api.js';
 import { unlock } from '../sound.js';
+import { SHOW_PLAYLISTS } from '../flags.js';
 
 function PlayerList({ room, meId }) {
   return (
@@ -138,29 +139,31 @@ function Settings({ room, isHost, update }) {
         )}
       </div>
 
-      <div>
-        <p className="mb-2 text-sm text-ink-dim">Period</p>
-        <div className="flex flex-wrap gap-2">
-          {room.periods.map((per) => {
-            const selected = String(settings.period) === per.key;
-            const value = per.key === 'all_time' ? 'all_time' : Number(per.key);
-            return (
-              <button
-                key={per.key}
-                disabled={!isHost || !per.availableForAll}
-                onClick={() => update({ period: value })}
-                className={`rounded-full px-4 py-1.5 text-sm font-bold transition ${
-                  selected ? 'bg-accent text-white' : 'bg-bg-raised text-ink-dim'
-                } disabled:opacity-40`}
-                title={per.availableForAll ? '' : 'Not everyone has this period yet'}
-              >
-                {per.label}
-                {!per.availableForAll && ' 🔒'}
-              </button>
-            );
-          })}
+      {SHOW_PLAYLISTS && (
+        <div>
+          <p className="mb-2 text-sm text-ink-dim">Period</p>
+          <div className="flex flex-wrap gap-2">
+            {room.periods.map((per) => {
+              const selected = String(settings.period) === per.key;
+              const value = per.key === 'all_time' ? 'all_time' : Number(per.key);
+              return (
+                <button
+                  key={per.key}
+                  disabled={!isHost || !per.availableForAll}
+                  onClick={() => update({ period: value })}
+                  className={`rounded-full px-4 py-1.5 text-sm font-bold transition ${
+                    selected ? 'bg-accent text-white' : 'bg-bg-raised text-ink-dim'
+                  } disabled:opacity-40`}
+                  title={per.availableForAll ? '' : 'Not everyone has this period yet'}
+                >
+                  {per.label}
+                  {!per.availableForAll && ' 🔒'}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       <Stepper
         label="Rounds"
@@ -271,16 +274,18 @@ export default function LobbyView({ room, meId, onLeave }) {
       )}
 
       <PlayerList room={room} meId={meId} />
-      <AvailabilityGrid room={room} />
-      <button
-        onClick={() => navigate('/setup')}
-        className="w-full rounded-full bg-bg-raised px-4 py-2.5 text-sm font-bold text-accent-2 transition active:scale-95"
-      >
-        Missing a year? Add your Wrapped playlists →
-      </button>
+      {SHOW_PLAYLISTS && <AvailabilityGrid room={room} />}
+      {SHOW_PLAYLISTS && (
+        <button
+          onClick={() => navigate('/setup')}
+          className="w-full rounded-full bg-bg-raised px-4 py-2.5 text-sm font-bold text-accent-2 transition active:scale-95"
+        >
+          Missing a year? Add your Wrapped playlists →
+        </button>
+      )}
       <Settings room={room} isHost={isHost} update={update} />
 
-      {import.meta.env.DEV && isHost && room.players.length < 5 && (
+      {mePlayer?.isDev && isHost && room.players.length < 5 && (
         <button
           onClick={addBot}
           className="w-full rounded-full border border-dashed border-accent-2/50 bg-accent-2/10 px-4 py-2.5 text-sm font-bold text-accent-2 transition active:scale-95"

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import Avatar from '../components/Avatar.jsx';
+import MuteButton from '../components/MuteButton.jsx';
 import { getSocket } from '../socket.js';
 import { api } from '../api.js';
+import { unlock } from '../sound.js';
 
 function PlayerList({ room, meId }) {
   return (
@@ -200,6 +202,7 @@ export default function LobbyView({ room, meId, onLeave }) {
 
   function startGame() {
     setError(null);
+    unlock(); // enable audio from this user gesture
     getSocket().emit('game:start', {}, (res) => {
       if (!res?.ok) setError(START_ERRORS[res?.error] ?? 'Could not start the game.');
     });
@@ -222,12 +225,15 @@ export default function LobbyView({ room, meId, onLeave }) {
           </button>
           <p className="text-xs text-ink-dim">{copied ? 'Copied!' : 'Tap the code to copy'}</p>
         </div>
-        <button
-          onClick={onLeave}
-          className="rounded-full bg-bg-raised px-4 py-2 text-sm font-bold text-ink-dim"
-        >
-          Leave
-        </button>
+        <div className="flex items-center gap-2">
+          <MuteButton />
+          <button
+            onClick={onLeave}
+            className="rounded-full bg-bg-raised px-4 py-2 text-sm font-bold text-ink-dim"
+          >
+            Leave
+          </button>
+        </div>
       </header>
 
       {mePlayer?.needsReauth && (

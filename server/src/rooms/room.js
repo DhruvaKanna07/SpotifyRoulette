@@ -16,7 +16,7 @@ export const DEFAULT_SETTINGS = {
   mode: 'roulette', // 'roulette' | 'matchup'
   period: 'all_time', // 'all_time' | <year number>
   rounds: 10,
-  timerSec: 15,
+  timerSec: 30, // Roulette only; Match-Up has no timer (submit-then-reveal).
 };
 
 // The periods a single player has data for: All Time is always present; each

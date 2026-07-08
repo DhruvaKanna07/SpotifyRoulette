@@ -18,9 +18,28 @@ Built, tested, committed, and pushed to `main` (GitHub: DhruvaKanna07/SpotifyRou
 - **Phase 2 — Rooms & lobby** ✅ (join codes, presence, availability grid, host settings)
 - **Phase 3 — Roulette mode** ✅ (secret draw, guessing, timer, scoring, reveal, scoreboard)
 - **Phase 4 — Match-Up mode** ✅ (shared-rank draw with dupe-redraw, matching board, scoring, reveal answer key, multi-round)
-- **Phase 5 — Polish (partial)** 🚧 — done: onboarding SVG stepper + deep reconnect/edge-case robustness. **Remaining: iFrame embed player, animations, sounds.**
+- **Phase 5 — Polish (nearly done)** 🚧 — done: onboarding SVG stepper, deep
+  reconnect/edge-case robustness, iFrame embed player, animations, sounds,
+  30s Roulette timer. **Remaining: deeper live-multiplayer testing only.**
 
 Phase 5 done so far:
+- **iFrame embed player** (`components/EmbedPlayer.jsx`): Spotify embed
+  (`open.spotify.com/embed/track/{id}?theme=0`) — the only way to hear a song in
+  dev mode. Always-on under the Roulette round + reveal cards; lazy per-card
+  "▶ Listen" toggle in the Match-Up board and reveal (avoids N iframes at once).
+- **Animations** (`index.css` keyframes + `useCountUp.js`): fade-up card
+  entrances, pop/shake on reveal, bounce-in + falling confetti on the winner
+  screen, and score count-ups on every scoreboard. Honors
+  `prefers-reduced-motion`.
+- **Sounds** (`sound.js`, all Web-Audio-synthesized — no asset files, works
+  offline): countdown tick (last 5s), lock-in, reveal, correct/wrong, winner
+  fanfare. Muted state persists in localStorage; `components/MuteButton.jsx` 🔊/🔇
+  lives in the lobby header. Audio is unlocked on the first user gesture (Start
+  button, a guess, a submit, or the mute toggle) — required by mobile browsers.
+- **Roulette timer default is now 30s** (`DEFAULT_SETTINGS.timerSec`, still
+  host-adjustable 5–60). Match-Up stays timerless (submit → auto-reveal when all
+  in). Round count is host-choosable via the existing lobby "Rounds" stepper
+  (1–20; Match-Up is additionally capped to the number of distinct shared ranks).
 - **Onboarding stepper** (`pages/Setup.jsx`, route `/setup`): 4-step illustrated
   guide (brand-neutral inline-SVG phone mocks, no Spotify branding) for copying a
   "Your Top Songs {year}" Wrapped playlist into an owned copy, with a year
@@ -42,10 +61,11 @@ Phase 5 done so far:
   round, Match-Up reveals when the hold-out disconnects, needsReauth surfaces);
   script deleted after.
 
-**Next up: finish Phase 5** — iFrame embed player (`https://open.spotify.com/embed/track/{id}`
-on the round/reveal screens; the only way to hear a song since dev-mode has no
-`preview_url`), then animations (score count-ups, reveal/winner transitions) and
-optional sounds.
+**Next up:** the only substantive thing left is the **live two-account browser
+playtest** (blocked on the human "Agree" click — see below). Everything in the
+build compiles and the app shell renders clean; the in-game views (embed/sounds/
+animations) still have not been exercised end-to-end because that needs two
+OAuth'd Spotify accounts.
 
 Phase 4 shape (as built): `game/matchup.js` is the pure engine (mirrors
 `roulette.js` — `startMatchGame`/`drawMatchRound`/`recordSubmission`/

@@ -1,4 +1,24 @@
+import { useEffect, useState } from 'react';
 import Avatar from '../components/Avatar.jsx';
+import EmbedPlayer from '../components/EmbedPlayer.jsx';
+import { useCountUp } from '../useCountUp.js';
+import { sfx } from '../sound.js';
+
+function ScoreRow({ rank, player, meId, delta }) {
+  const score = useCountUp(player.score);
+  return (
+    <li className="flex items-center gap-3">
+      <span className="w-5 text-center font-bold text-ink-dim">{rank}</span>
+      <Avatar player={player} size="sm" />
+      <span className="flex-1 truncate font-semibold">
+        {player.displayName}
+        {player.id === meId && <span className="text-ink-dim"> (you)</span>}
+      </span>
+      {delta > 0 && <span className="text-xs font-bold text-good">+{delta}</span>}
+      <span className="w-12 text-right font-extrabold tabular-nums">{score}</span>
+    </li>
+  );
+}
 
 // Answer key + scoring for a Match-Up round. Shows each song's true owner and,
 // for the viewer, whether their own pick was right.
@@ -6,6 +26,15 @@ export default function MatchRevealView({ reveal, meId, isHost, onNext }) {
   const isLast = reveal.round >= reveal.totalRounds;
   const mine = reveal.results.find((r) => r.player.id === meId);
   const players = new Map(reveal.songs.map((s) => [s.ownerId, s.owner]));
+  const [listening, setListening] = useState(null);
+
+  useEffect(() => {
+    sfx.reveal();
+    if (mine && mine.correct > 0) {
+      const t = setTimeout(() => sfx.correct(), 260);
+      return () => clearTimeout(t);
+    }
+  }, [reveal.index]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <main className="mx-auto max-w-md space-y-4 px-4 py-6">
@@ -15,7 +44,7 @@ export default function MatchRevealView({ reveal, meId, isHost, onNext }) {
         </p>
         <h1 className="text-2xl font-extrabold">{reveal.rankLabel}</h1>
         {mine && (
-          <p className="mt-1 text-lg font-bold text-good">
+          <p key={reveal.index} className="mt-1 animate-pop text-lg font-bold text-good">
             You got {mine.correct}/{mine.total} right
             {mine.roundScore > 0 && <span> · +{mine.roundScore}</span>}
           </p>
@@ -30,34 +59,45 @@ export default function MatchRevealView({ reveal, meId, isHost, onNext }) {
             const gotIt = myPick === s.ownerId;
             const pickedPlayer = myPick ? players.get(myPick) : null;
             return (
-              <li key={s.cardId} className="flex items-center gap-3">
-                {s.track.albumArtUrl ? (
-                  <img src={s.track.albumArtUrl} alt="" className="h-12 w-12 rounded-md" />
-                ) : (
-                  <div className="grid h-12 w-12 place-items-center rounded-md bg-bg-raised text-xl">
-                    🎵
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-bold leading-tight">{s.track.name}</p>
-                  <div className="flex items-center gap-1.5 text-sm">
-                    {s.owner && <Avatar player={s.owner} size="sm" />}
-                    <span className="truncate font-semibold">{s.owner?.displayName}</span>
-                  </div>
-                </div>
-                {mine &&
-                  (gotIt ? (
-                    <span className="text-lg">✅</span>
+              <li key={s.cardId} className="space-y-2">
+                <div className="flex items-center gap-3">
+                  {s.track.albumArtUrl ? (
+                    <img src={s.track.albumArtUrl} alt="" className="h-12 w-12 rounded-md" />
                   ) : (
-                    <span className="flex flex-col items-end text-right">
-                      <span className="text-lg">❌</span>
-                      {pickedPlayer && (
-                        <span className="text-[10px] text-ink-dim">
-                          you said {pickedPlayer.displayName}
-                        </span>
-                      )}
-                    </span>
-                  ))}
+                    <div className="grid h-12 w-12 place-items-center rounded-md bg-bg-raised text-xl">
+                      🎵
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-bold leading-tight">{s.track.name}</p>
+                    <div className="flex items-center gap-1.5 text-sm">
+                      {s.owner && <Avatar player={s.owner} size="sm" />}
+                      <span className="truncate font-semibold">{s.owner?.displayName}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() =>
+                      setListening((cur) => (cur === s.cardId ? null : s.cardId))
+                    }
+                    className="shrink-0 rounded-full bg-bg-raised px-2.5 py-1 text-[11px] font-bold text-ink-dim transition active:scale-95"
+                  >
+                    {listening === s.cardId ? 'Hide' : '▶'}
+                  </button>
+                  {mine &&
+                    (gotIt ? (
+                      <span className="text-lg">✅</span>
+                    ) : (
+                      <span className="flex flex-col items-end text-right">
+                        <span className="text-lg">❌</span>
+                        {pickedPlayer && (
+                          <span className="text-[10px] text-ink-dim">
+                            you said {pickedPlayer.displayName}
+                          </span>
+                        )}
+                      </span>
+                    ))}
+                </div>
+                {listening === s.cardId && <EmbedPlayer trackId={s.track.trackId} />}
               </li>
             );
           })}
@@ -67,21 +107,15 @@ export default function MatchRevealView({ reveal, meId, isHost, onNext }) {
       <section className="card p-4">
         <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-dim">Scoreboard</h2>
         <ol className="space-y-1.5">
-          {reveal.scoreboard.map((p, i) => {
-            const delta = reveal.roundScores[p.id] ?? 0;
-            return (
-              <li key={p.id} className="flex items-center gap-3">
-                <span className="w-5 text-center font-bold text-ink-dim">{i + 1}</span>
-                <Avatar player={p} size="sm" />
-                <span className="flex-1 truncate font-semibold">
-                  {p.displayName}
-                  {p.id === meId && <span className="text-ink-dim"> (you)</span>}
-                </span>
-                {delta > 0 && <span className="text-xs font-bold text-good">+{delta}</span>}
-                <span className="w-12 text-right font-extrabold tabular-nums">{p.score}</span>
-              </li>
-            );
-          })}
+          {reveal.scoreboard.map((p, i) => (
+            <ScoreRow
+              key={p.id}
+              rank={i + 1}
+              player={p}
+              meId={meId}
+              delta={reveal.roundScores[p.id] ?? 0}
+            />
+          ))}
         </ol>
       </section>
 

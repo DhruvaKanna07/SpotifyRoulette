@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react';
 import Avatar from '../components/Avatar.jsx';
+import EmbedPlayer from '../components/EmbedPlayer.jsx';
+import { sfx, unlock } from '../sound.js';
 
 // Assign one player to each shuffled song (a full matching). Picking a player
 // who's already on another card moves them here, so every player is used once.
 export default function MatchUpView({ round, meId, onSubmit }) {
   const [assignment, setAssignment] = useState(round.yourAssignment ?? {});
   const [submitting, setSubmitting] = useState(false);
+  const [listening, setListening] = useState(null); // cardId with its player open
 
   // Reset local picks only when a new round starts (not on refresh emits).
   useEffect(() => {
     setAssignment(round.yourAssignment ?? {});
     setSubmitting(false);
+    setListening(null);
   }, [round.index]);
 
   const { songs, players } = round;
@@ -33,6 +37,8 @@ export default function MatchUpView({ round, meId, onSubmit }) {
   function submit() {
     if (!complete || submitting) return;
     setSubmitting(true);
+    unlock();
+    sfx.lockIn();
     onSubmit(assignment);
   }
 
@@ -65,7 +71,8 @@ export default function MatchUpView({ round, meId, onSubmit }) {
           return (
             <section
               key={s.cardId}
-              className={`card p-3 ${chosen ? '' : 'ring-1 ring-accent/40'}`}
+              className={`card animate-fade-up p-3 ${chosen ? '' : 'ring-1 ring-accent/40'}`}
+              style={{ animationDelay: `${i * 60}ms` }}
             >
               <div className="mb-3 flex items-center gap-3">
                 {s.track.albumArtUrl ? (
@@ -82,7 +89,20 @@ export default function MatchUpView({ round, meId, onSubmit }) {
                   <p className="truncate font-bold leading-tight">{s.track.name}</p>
                   <p className="truncate text-sm text-ink-dim">{s.track.artists.join(', ')}</p>
                 </div>
+                <button
+                  onClick={() =>
+                    setListening((cur) => (cur === s.cardId ? null : s.cardId))
+                  }
+                  className="shrink-0 rounded-full bg-bg-raised px-3 py-1.5 text-xs font-bold text-ink-dim transition active:scale-95"
+                >
+                  {listening === s.cardId ? 'Hide' : '▶ Listen'}
+                </button>
               </div>
+              {listening === s.cardId && (
+                <div className="mb-3">
+                  <EmbedPlayer trackId={s.track.trackId} />
+                </div>
+              )}
               <div className="flex flex-wrap gap-2">
                 {players.map((p) => {
                   const selected = chosen === p.id;

@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Avatar from '../components/Avatar.jsx';
+import EmbedPlayer from '../components/EmbedPlayer.jsx';
+import { sfx, unlock } from '../sound.js';
 
 function useNow(active) {
   const [now, setNow] = useState(Date.now());
@@ -15,6 +17,14 @@ function CountdownRing({ deadline, timerSec }) {
   const now = useNow(true);
   const remaining = Math.max(0, deadline - now);
   const secs = Math.ceil(remaining / 1000);
+  // Tick sound on each of the final 5 seconds.
+  const lastSec = useRef(null);
+  useEffect(() => {
+    if (secs !== lastSec.current) {
+      if (secs <= 5 && secs > 0) sfx.tick();
+      lastSec.current = secs;
+    }
+  }, [secs]);
   const ratio = Math.max(0, Math.min(1, remaining / (timerSec * 1000)));
   const R = 26;
   const C = 2 * Math.PI * R;
@@ -48,6 +58,12 @@ export default function RoundView({ round, meId, onGuess }) {
   const others = round.players.filter((p) => p.id !== meId);
   const totalGuessers = round.players.length - 1;
 
+  const guess = (playerId) => {
+    unlock();
+    sfx.lockIn();
+    onGuess(playerId);
+  };
+
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col px-4 py-6">
       <header className="mb-4 flex items-center justify-between">
@@ -60,7 +76,7 @@ export default function RoundView({ round, meId, onGuess }) {
         <CountdownRing deadline={round.deadline} timerSec={round.timerSec} />
       </header>
 
-      <section className="card overflow-hidden">
+      <section key={round.index} className="card animate-fade-up overflow-hidden">
         {track.albumArtUrl ? (
           <img src={track.albumArtUrl} alt="" className="aspect-square w-full object-cover" />
         ) : (
@@ -74,6 +90,9 @@ export default function RoundView({ round, meId, onGuess }) {
           </div>
           <h1 className="text-xl font-extrabold leading-tight">{track.name}</h1>
           <p className="text-ink-dim">{track.artists.join(', ')}</p>
+          <div className="mt-3">
+            <EmbedPlayer trackId={track.trackId} />
+          </div>
         </div>
       </section>
 
@@ -104,7 +123,7 @@ export default function RoundView({ round, meId, onGuess }) {
             {others.map((p) => (
               <button
                 key={p.id}
-                onClick={() => onGuess(p.id)}
+                onClick={() => guess(p.id)}
                 className="flex items-center gap-3 rounded-2xl bg-bg-card p-3 transition active:scale-95"
               >
                 <Avatar player={p} />

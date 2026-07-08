@@ -1,8 +1,39 @@
+import { useEffect } from 'react';
 import Avatar from '../components/Avatar.jsx';
+import EmbedPlayer from '../components/EmbedPlayer.jsx';
+import { useCountUp } from '../useCountUp.js';
+import { sfx } from '../sound.js';
+
+function ScoreRow({ rank, player, meId, delta }) {
+  const score = useCountUp(player.score);
+  return (
+    <li className="flex items-center gap-3">
+      <span className="w-5 text-center font-bold text-ink-dim">{rank}</span>
+      <Avatar player={player} size="sm" />
+      <span className="flex-1 truncate font-semibold">
+        {player.displayName}
+        {player.id === meId && <span className="text-ink-dim"> (you)</span>}
+      </span>
+      {delta > 0 && <span className="text-xs font-bold text-good">+{delta}</span>}
+      <span className="w-12 text-right font-extrabold tabular-nums">{score}</span>
+    </li>
+  );
+}
 
 export default function RevealView({ reveal, meId, isHost, onNext }) {
   const byId = new Map(reveal.scoreboard.map((p) => [p.id, p]));
   const isLast = reveal.round >= reveal.totalRounds;
+
+  // Sound: a reveal chime, then a correct/wrong flourish for the viewer.
+  useEffect(() => {
+    sfx.reveal();
+    const mine = reveal.guesses.find((g) => g.guesserId === meId);
+    if (!mine) return;
+    const t = setTimeout(() => (mine.correct ? sfx.correct() : sfx.wrong()), 260);
+    return () => clearTimeout(t);
+  }, [reveal.index, meId]);
+
+  const myGuess = reveal.guesses.find((g) => g.guesserId === meId);
 
   return (
     <main className="mx-auto max-w-md space-y-4 px-4 py-6">
@@ -10,7 +41,12 @@ export default function RevealView({ reveal, meId, isHost, onNext }) {
         Round {reveal.round} of {reveal.totalRounds}
       </p>
 
-      <section className="card flex flex-col items-center gap-3 p-5 text-center">
+      <section
+        key={reveal.index}
+        className={`card flex animate-pop flex-col items-center gap-3 p-5 text-center ${
+          myGuess && !myGuess.correct ? 'animate-shake' : ''
+        }`}
+      >
         {reveal.owner && <Avatar player={reveal.owner} size="lg" />}
         <p className="text-lg">
           It was <span className="font-extrabold">{reveal.owner?.displayName}</span>'s song!
@@ -25,6 +61,9 @@ export default function RevealView({ reveal, meId, isHost, onNext }) {
               {reveal.rankLabel} · {reveal.periodLabel}
             </p>
           </div>
+        </div>
+        <div className="w-full">
+          <EmbedPlayer trackId={reveal.track.trackId} />
         </div>
       </section>
 
@@ -59,21 +98,15 @@ export default function RevealView({ reveal, meId, isHost, onNext }) {
       <section className="card p-4">
         <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-dim">Scoreboard</h2>
         <ol className="space-y-1.5">
-          {reveal.scoreboard.map((p, i) => {
-            const delta = reveal.roundScores[p.id] ?? 0;
-            return (
-              <li key={p.id} className="flex items-center gap-3">
-                <span className="w-5 text-center font-bold text-ink-dim">{i + 1}</span>
-                <Avatar player={p} size="sm" />
-                <span className="flex-1 truncate font-semibold">
-                  {p.displayName}
-                  {p.id === meId && <span className="text-ink-dim"> (you)</span>}
-                </span>
-                {delta > 0 && <span className="text-xs font-bold text-good">+{delta}</span>}
-                <span className="w-12 text-right font-extrabold tabular-nums">{p.score}</span>
-              </li>
-            );
-          })}
+          {reveal.scoreboard.map((p, i) => (
+            <ScoreRow
+              key={p.id}
+              rank={i + 1}
+              player={p}
+              meId={meId}
+              delta={reveal.roundScores[p.id] ?? 0}
+            />
+          ))}
         </ol>
       </section>
 

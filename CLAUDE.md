@@ -22,6 +22,45 @@ Built, tested, committed, and pushed to `main` (GitHub: DhruvaKanna07/SpotifyRou
   reconnect/edge-case robustness, iFrame embed player, animations, sounds,
   30s Roulette timer. **Remaining: deeper live-multiplayer testing only.**
 
+### Latest session — product tweaks (all shipped to `main`)
+
+Requested by the owner while playtesting solo; all done, committed, pushed:
+
+1. **Dev mode is account-gated.** Test bots are locked to specific Spotify user
+   ids — `config.devSpotifyUserIds` (defaults to the owner id
+   `02i8dglcphxxgwdwg8rcqf6e5`, env override `DEV_SPOTIFY_USER_IDS`) +
+   `isDevUser(session)`. `serializeRoom` exposes per-player `isDev`; the lobby
+   "🤖 Add a test bot" button shows only for a dev host. Not tied to NODE_ENV.
+2. **Roulette "unknown variable" setting** (`settings.unknown`, default
+   `'player'`; lobby "Guess the…" selector, roulette only). Each round hides one
+   attribute: **player** (song+rank shown → tap avatar), **song** (owner+rank
+   shown → pick real cover from 4 decoys sampled from the room's track pool),
+   **rank** (owner+song shown → type the number, **proximity-scored**: 100 exact,
+   −15/rank of distance, floor 0). Engine in `roulette.js` branches per mode for
+   `recordGuess`/scoring/serialize; privacy preserved per mode (player hides
+   owner, song hides the correct option, rank strips `track.rank`). Owner-wrong
+   bonus applies **only** in player mode. Guess payload is generic `{ guess }`.
+   Bots guess per mode. Client: `RoundView` has three guess UIs (avatars / 4
+   cover cards / number input), `RevealView` describes guesses per mode. Proven
+   by a 24-assertion engine test (deleted after).
+3. **Guess your own song.** Owner may now guess (the "sit out" screen is gone);
+   everyone guesses among ALL players incl. self. `recordGuess` dropped the owner
+   check; `allGuessed` now counts every connected player; bots guess on owner
+   rounds too. **Own-song guesses score normally** (owner's explicit choice — a
+   self-pick is an easy 100; flip if it feels exploitable).
+4. **Album cover drop-in** each round (`sr-drop-in` keyframe, keyed by round
+   index; reduced-motion aware).
+5. **Theme is green/black (Spotify-ish), NOT purple** anymore — see the updated
+   Design gotcha below. `@theme` tokens now `--color-accent`/`accent-2`/`good`
+   = greens, `--color-bg` near-black.
+6. **Playlist/year features hidden** behind `client/src/flags.js`
+   `SHOW_PLAYLISTS=false` (Home's 2 links, lobby availability grid + "add years"
+   shortcut + Settings period row). Routes/pages/`/setup`/`/me` kept for a future
+   rework. Game just uses `all_time` (top 50). **Known bug to fix in that rework:
+   year playlists are *detected* but their items come back empty** (`/me` shows
+   `years: {2022:[],…}`) — the `/playlists/{id}/items` fetch returns nothing;
+   didn't chase it since the feature is hidden.
+
 Phase 5 done so far:
 - **iFrame embed player** (`components/EmbedPlayer.jsx`): Spotify embed
   (`open.spotify.com/embed/track/{id}?theme=0`) — the only way to hear a song in
@@ -273,6 +312,13 @@ asserts no `game:round` payload contains `ownerId`/`guesses`).
   silently dropped (this already caused an invisible-UI bug). Use the token form.
 - **StrictMode double-invoke:** the OAuth `code` is single-use, so `/callback`
   guards its exchange with a ref (`Callback.jsx`). Preserve that.
-- **Design:** dark, playful party-game vibe; deliberately **not** Spotify's
-  branding. Album art is the primary visual. Per-player bold color + emoji avatar.
+- **Design:** dark, playful party-game vibe on a **green + black, Spotify-ish
+  palette** (accent/accent-2/good are greens, bg near-black — changed from the
+  original purple at the owner's request). Album art is the primary visual.
+  Per-player bold color + emoji avatars are kept as-is (they're player identities,
+  not theme). Animations live in `index.css` (`sr-*` keyframes) and honor
+  `prefers-reduced-motion`.
+- **Feature flag:** `client/src/flags.js` `SHOW_PLAYLISTS` currently hides all
+  year/playlist UI (V1 is just "log in → top 50"). `/setup` + `/me` routes and
+  the manual-tag endpoint still exist for a later rework.
 ```

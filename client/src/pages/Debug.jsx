@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
+import { readRoom } from './Setup.jsx';
 
 function RankBadge({ rank, label }) {
   return (
@@ -102,6 +103,16 @@ export default function Debug() {
 
   return (
     <main className="mx-auto max-w-md space-y-4 px-4 py-8">
+      <button
+        onClick={() => {
+          const room = readRoom();
+          navigate(room ? `/room/${room}` : '/');
+        }}
+        className="text-sm font-bold text-ink-dim"
+      >
+        {readRoom() ? '← Back to game' : '← Home'}
+      </button>
+
       <header className="card p-5">
         <p className="text-xs uppercase tracking-wide text-ink-dim">
           What the game sees about you

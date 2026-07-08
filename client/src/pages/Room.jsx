@@ -96,7 +96,14 @@ export default function Room() {
   const onMatchNext = () => getSocket().emit('matchup:next', {});
   const onPlayAgain = () => getSocket().emit('game:playAgain', {});
   const onLeave = () =>
-    getSocket().emit('room:leave', {}, () => navigate('/', { replace: true }));
+    getSocket().emit('room:leave', {}, () => {
+      try {
+        sessionStorage.removeItem('sr_room');
+      } catch {
+        // ignore
+      }
+      navigate('/', { replace: true });
+    });
 
   if (error) {
     return (

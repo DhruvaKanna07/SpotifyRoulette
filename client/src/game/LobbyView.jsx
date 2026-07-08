@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Avatar from '../components/Avatar.jsx';
 import MuteButton from '../components/MuteButton.jsx';
 import { getSocket } from '../socket.js';
@@ -184,10 +185,20 @@ function Settings({ room, isHost, update }) {
 }
 
 export default function LobbyView({ room, meId, onLeave }) {
+  const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState(null);
   const isHost = room.hostPlayerId === meId;
   const mePlayer = room.players.find((p) => p.id === meId);
+
+  // Remember this room so /setup and /me can offer a "Back to game" button.
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('sr_room', room.code);
+    } catch {
+      // ignore
+    }
+  }, [room.code]);
 
   const update = (patch) => getSocket().emit('room:updateSettings', patch);
 
@@ -254,6 +265,12 @@ export default function LobbyView({ room, meId, onLeave }) {
 
       <PlayerList room={room} meId={meId} />
       <AvailabilityGrid room={room} />
+      <button
+        onClick={() => navigate('/setup')}
+        className="w-full rounded-full bg-bg-raised px-4 py-2.5 text-sm font-bold text-accent-2 transition active:scale-95"
+      >
+        Missing a year? Add your Wrapped playlists →
+      </button>
       <Settings room={room} isHost={isHost} update={update} />
 
       {isHost ? (

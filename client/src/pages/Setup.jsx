@@ -164,7 +164,17 @@ const STEPS = [
   },
 ];
 
-const YEARS = [0, 1, 2, 3, 4].map((n) => new Date().getFullYear() - 1 - n);
+// Copy-able Wrapped years (All-Time is automatic, so it's not in this list).
+const YEARS = [0, 1, 2, 3].map((n) => new Date().getFullYear() - 1 - n);
+
+// The room the player came from (set by the lobby), so we can offer a way back.
+export function readRoom() {
+  try {
+    return sessionStorage.getItem('sr_room');
+  } catch {
+    return null;
+  }
+}
 
 export default function Setup() {
   const navigate = useNavigate();
@@ -202,20 +212,56 @@ export default function Setup() {
   const s = STEPS[step];
   const Art = s.art;
   const isLast = step === STEPS.length - 1;
+  const isAllTime = year === 'all_time';
+
+  const backRoom = readRoom();
+  const goBack = () => navigate(backRoom ? `/room/${backRoom}` : '/');
+
+  const RescanResult = () =>
+    result ? (
+      <div className="text-sm">
+        {result.added && (
+          <p className="font-bold text-good">
+            {result.added.length > 0
+              ? `Added ${result.added.join(', ')} 🎉`
+              : 'No new years found — make sure each copy keeps “Your Top Songs” and the year in its name.'}
+          </p>
+        )}
+        {result.error && (
+          <p className="text-bad">
+            {result.error === 'reach'
+              ? "Couldn't reach Spotify. Try reconnecting from Home."
+              : 'Rescan failed. Try again.'}
+          </p>
+        )}
+      </div>
+    ) : null;
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col px-4 py-6">
-      <header className="mb-2 flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-ink-dim">
-          ← Back
+      <header className="mb-3 flex items-center justify-between">
+        <button onClick={goBack} className="text-sm font-bold text-ink-dim">
+          {backRoom ? '← Back to game' : '← Home'}
         </button>
-        <p className="text-xs uppercase tracking-wide text-ink-dim">
-          Add a year · step {step + 1}/{STEPS.length}
-        </p>
+        <button
+          onClick={rescan}
+          disabled={rescanning}
+          className="rounded-full bg-accent-2 px-4 py-1.5 text-sm font-bold text-white transition active:scale-95 disabled:opacity-60"
+        >
+          {rescanning ? 'Rescanning…' : 'Rescan'}
+        </button>
       </header>
 
-      {/* which year you're copying (drives the illustrations) */}
-      <div className="mb-4 flex flex-wrap justify-center gap-2">
+      {/* which period you're setting up (All-Time first, then copy-able years) */}
+      <div className="mb-2 flex flex-wrap justify-center gap-2">
+        <button
+          onClick={() => setYear('all_time')}
+          className={`rounded-full px-3 py-1 text-sm font-bold transition ${
+            isAllTime ? 'bg-accent text-white' : 'bg-bg-raised text-ink-dim'
+          }`}
+        >
+          All Time ✓
+        </button>
         {YEARS.map((y) => {
           const has = owned.includes(y);
           const sel = y === year;
@@ -232,77 +278,83 @@ export default function Setup() {
           );
         })}
       </div>
+      <RescanResult />
 
-      <section className="card flex flex-1 flex-col items-center p-5 text-center">
-        <div className="mb-4">
-          <Art year={year} />
-        </div>
-        <h1 className="text-xl font-extrabold">{s.title}</h1>
-        <p className="mt-2 text-sm text-ink-dim">{s.body(year)}</p>
+      {isAllTime ? (
+        // All-Time needs no setup — it comes straight from your top tracks.
+        <section className="card mt-2 flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+          <div className="text-5xl">✅</div>
+          <h1 className="text-xl font-extrabold">All-Time is ready automatically</h1>
+          <p className="text-sm text-ink-dim">
+            It comes from your top ~50 tracks — no playlist copy needed. (You can
+            delete any “Your All-Time Top Songs” copy you made; the game doesn't
+            use it.)
+          </p>
+          <p className="text-sm text-ink-dim">
+            Pick a <b>year</b> above to add year-by-year modes.
+          </p>
+        </section>
+      ) : (
+        <>
+          <section className="card mt-2 flex flex-1 flex-col items-center p-5 text-center">
+            <div className="mb-4">
+              <Art year={year} />
+            </div>
+            <p className="text-xs uppercase tracking-wide text-ink-dim">
+              Step {step + 1} of {STEPS.length}
+            </p>
+            <h1 className="mt-1 text-xl font-extrabold">{s.title}</h1>
+            <p className="mt-2 text-sm text-ink-dim">{s.body(year)}</p>
 
-        {isLast && (
-          <div className="mt-5 w-full space-y-3">
-            <button
-              onClick={rescan}
-              disabled={rescanning}
-              className="w-full rounded-full bg-good px-6 py-3 text-lg font-extrabold text-[#08301f] transition active:scale-95 disabled:opacity-60"
-            >
-              {rescanning ? 'Rescanning…' : 'Rescan playlists'}
-            </button>
-            {result?.added && (
-              <p className="text-sm font-bold text-good">
-                {result.added.length > 0
-                  ? `Added ${result.added.join(', ')} 🎉`
-                  : 'No new years found yet — double-check the playlist name.'}
-              </p>
+            {isLast && (
+              <button
+                onClick={rescan}
+                disabled={rescanning}
+                className="mt-5 w-full rounded-full bg-good px-6 py-3 text-lg font-extrabold text-[#08301f] transition active:scale-95 disabled:opacity-60"
+              >
+                {rescanning ? 'Rescanning…' : 'Rescan playlists'}
+              </button>
             )}
-            {result?.error && (
-              <p className="text-sm text-bad">
-                {result.error === 'reach'
-                  ? "Couldn't reach Spotify. Try reconnecting from Home."
-                  : 'Rescan failed. Try again.'}
-              </p>
+          </section>
+
+          {/* progress dots */}
+          <div className="my-4 flex justify-center gap-2">
+            {STEPS.map((_, i) => (
+              <span
+                key={i}
+                className={`h-2 rounded-full transition-all ${
+                  i === step ? 'w-6 bg-accent' : 'w-2 bg-white/20'
+                }`}
+              />
+            ))}
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => setStep((n) => Math.max(0, n - 1))}
+              disabled={step === 0}
+              className="flex-1 rounded-full bg-bg-raised px-6 py-3 font-bold text-ink-dim transition active:scale-95 disabled:opacity-30"
+            >
+              Previous
+            </button>
+            {!isLast ? (
+              <button
+                onClick={() => setStep((n) => Math.min(STEPS.length - 1, n + 1))}
+                className="flex-1 rounded-full bg-accent-2 px-6 py-3 font-bold text-white transition active:scale-95"
+              >
+                Next
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate('/me')}
+                className="flex-1 rounded-full bg-accent-2 px-6 py-3 font-bold text-white transition active:scale-95"
+              >
+                View my data
+              </button>
             )}
           </div>
-        )}
-      </section>
-
-      {/* progress dots */}
-      <div className="my-4 flex justify-center gap-2">
-        {STEPS.map((_, i) => (
-          <span
-            key={i}
-            className={`h-2 rounded-full transition-all ${
-              i === step ? 'w-6 bg-accent' : 'w-2 bg-white/20'
-            }`}
-          />
-        ))}
-      </div>
-
-      <div className="flex gap-3">
-        <button
-          onClick={() => setStep((n) => Math.max(0, n - 1))}
-          disabled={step === 0}
-          className="flex-1 rounded-full bg-bg-raised px-6 py-3 font-bold text-ink-dim transition active:scale-95 disabled:opacity-30"
-        >
-          Previous
-        </button>
-        {!isLast ? (
-          <button
-            onClick={() => setStep((n) => Math.min(STEPS.length - 1, n + 1))}
-            className="flex-1 rounded-full bg-accent-2 px-6 py-3 font-bold text-white transition active:scale-95"
-          >
-            Next
-          </button>
-        ) : (
-          <button
-            onClick={() => navigate('/me')}
-            className="flex-1 rounded-full bg-accent-2 px-6 py-3 font-bold text-white transition active:scale-95"
-          >
-            View my data
-          </button>
-        )}
-      </div>
+        </>
+      )}
     </main>
   );
 }

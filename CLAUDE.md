@@ -42,10 +42,17 @@ Phase 5 done so far:
   (1–20; Match-Up is additionally capped to the number of distinct shared ranks).
 - **Onboarding stepper** (`pages/Setup.jsx`, route `/setup`): 4-step illustrated
   guide (brand-neutral inline-SVG phone mocks, no Spotify branding) for copying a
-  "Your Top Songs {year}" Wrapped playlist into an owned copy, with a year
-  selector and a Rescan that reports which years were newly detected. Entry
-  points from Home (connected) and the `/me` debug page (which lost its old
-  text hint).
+  "Your Top Songs {year}" Wrapped playlist into an owned copy. Period row leads
+  with **All Time** (automatic, no copy needed) then copy-able years; Rescan is
+  always in the header and reports newly detected years. **Manual-tag fallback**
+  (spec §Playlist detection): if auto-detection misses a renamed/localized copy,
+  paste its playlist link → `POST /api/playlists/manual {url, period}` parses the
+  id, fetches items, and tags it. The mapping is stored on the session
+  (`player.manualPlaylists`) and **re-applied inside `buildLibrary`**, so it
+  survives rescans. Entry points from Home, the `/me` debug page, and a "Missing
+  a year?" shortcut under the lobby availability grid. `/me` and `/setup` show
+  "← Back to game" when the player came from a room (remembered in
+  `sessionStorage['sr_room']`).
 - **Deep robustness:** (1) **reconnect bug fixed** — `joinRoom` checked the
   `phase !== 'lobby'` gate *before* the known-player rejoin branch, so a mid-game
   phone refresh failed to restore; the rejoin check now runs first (new players

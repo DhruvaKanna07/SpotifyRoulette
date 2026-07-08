@@ -80,17 +80,28 @@ export function detectYearPlaylists(playlists, spotifyUserId) {
   return found;
 }
 
-// Fetch a single year playlist's items and turn them into a ranked list.
-async function fetchYearRanked(player, playlistId) {
+// Fetch a playlist's items and turn them into a ranked list (order == rank).
+// Used for both auto-detected year copies and manually pasted playlist links.
+export async function fetchPlaylistRanked(player, playlistId) {
   const items = await withFreshToken(player, (token) =>
     getPlaylistItems(token, playlistId),
   );
   const ranked = [];
   items.forEach((item, index) => {
-    const track = toRankedTrack(item.track, index + 1); // order == rank
+    const track = toRankedTrack(item.track, index + 1);
     if (track) ranked.push(track);
   });
   return ranked;
+}
+
+// Pull a Spotify playlist id out of a link or URI the user pasted.
+//   https://open.spotify.com/playlist/{id}?si=...   (optionally /intl-xx/)
+//   spotify:playlist:{id}
+export function parsePlaylistId(input) {
+  if (!input || typeof input !== 'string') return null;
+  const m =
+    input.match(/playlist[/:]([A-Za-z0-9]+)/) ?? input.match(/^([A-Za-z0-9]{16,})$/);
+  return m ? m[1] : null;
 }
 
 // Build the full library for a player. Returns the profile plus:
@@ -117,7 +128,23 @@ export async function buildLibrary(player) {
 
   const years = new Map();
   for (const { playlistId, year } of detected) {
-    years.set(year, await fetchYearRanked(player, playlistId));
+    years.set(year, await fetchPlaylistRanked(player, playlistId));
+  }
+
+  // Re-apply playlists the user manually tagged (by pasting a link), so they
+  // survive a rescan. A manual entry overrides auto-detection for its period.
+  let finalAllTime = allTime;
+  if (player.manualPlaylists) {
+    for (const [period, playlistId] of Object.entries(player.manualPlaylists)) {
+      try {
+        const ranked = await fetchPlaylistRanked(player, playlistId);
+        if (ranked.length === 0) continue;
+        if (period === 'all_time') finalAllTime = ranked;
+        else years.set(Number(period), ranked);
+      } catch {
+        // A manual entry that no longer reads (deleted playlist etc.) is skipped.
+      }
+    }
   }
 
   // A clean scan means the tokens are healthy again.
@@ -125,7 +152,7 @@ export async function buildLibrary(player) {
 
   return {
     profile: { id: profile.id, displayName: profile.display_name },
-    allTime,
+    allTime: finalAllTime,
     years,
     detectedPlaylists: detected,
   };

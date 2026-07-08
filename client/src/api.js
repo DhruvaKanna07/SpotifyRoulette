@@ -25,4 +25,9 @@ export const api = {
     }),
   me: () => request('/me'),
   rescan: () => request('/rescan', { method: 'POST' }),
+  manualPlaylist: (url, period) =>
+    request('/playlists/manual', {
+      method: 'POST',
+      body: JSON.stringify({ url, period }),
+    }),
 };

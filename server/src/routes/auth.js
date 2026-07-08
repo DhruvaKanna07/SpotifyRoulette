@@ -14,7 +14,11 @@ import {
   buildAuthorizeUrl,
   exchangeCodeForTokens,
 } from '../spotify/auth.js';
-import { buildLibrary } from '../spotify/library.js';
+import {
+  buildLibrary,
+  fetchPlaylistRanked,
+  parsePlaylistId,
+} from '../spotify/library.js';
 import {
   putPendingAuth,
   takePendingAuth,
@@ -110,6 +114,45 @@ authRouter.get('/me', (req, res) => {
     },
     library: serializeLibrary(player.library),
   });
+});
+
+// 5b. Manual tag: the user pastes a playlist link when auto-detection misses it
+// (renamed/localized copy). We fetch its items and register it for the given
+// period; the mapping is stored on the session so it survives future rescans.
+authRouter.post('/playlists/manual', async (req, res) => {
+  const player = readSession(req);
+  if (!player) return res.status(401).json({ error: 'not_authenticated' });
+
+  const { url, period } = req.body ?? {};
+  const playlistId = parsePlaylistId(url);
+  if (!playlistId) return res.status(400).json({ error: 'invalid_url' });
+
+  const key = String(period);
+  const isYear = /^\d{4}$/.test(key);
+  if (key !== 'all_time' && !isYear) {
+    return res.status(400).json({ error: 'invalid_period' });
+  }
+
+  try {
+    const ranked = await fetchPlaylistRanked(player, playlistId);
+    if (ranked.length === 0) {
+      // Spotify returns no items for playlists the user can't read (i.e. doesn't
+      // own). Guide them to paste their OWN copy.
+      return res.status(400).json({ error: 'empty_or_unreadable' });
+    }
+    player.manualPlaylists = player.manualPlaylists ?? {};
+    player.manualPlaylists[key] = playlistId;
+    if (key === 'all_time') player.library.allTime = ranked;
+    else player.library.years.set(Number(key), ranked);
+    res.json({ library: serializeLibrary(player.library) });
+  } catch (err) {
+    console.error('[playlists/manual] failed:', err.message);
+    const status = err.status === 404 ? 400 : 502;
+    res.status(status).json({
+      error: err.status === 404 ? 'empty_or_unreadable' : 'manual_add_failed',
+      detail: err.message,
+    });
+  }
 });
 
 // 5. Rescan: rebuild the library (e.g. after copying Wrapped playlists).

@@ -183,6 +183,9 @@ export default function Setup() {
   const [owned, setOwned] = useState([]); // years already detected
   const [rescanning, setRescanning] = useState(false);
   const [result, setResult] = useState(null); // { added: number } | { error }
+  const [manualUrl, setManualUrl] = useState('');
+  const [manualBusy, setManualBusy] = useState(false);
+  const [manualMsg, setManualMsg] = useState(null); // { ok } | { error }
 
   useEffect(() => {
     api
@@ -213,6 +216,24 @@ export default function Setup() {
   const Art = s.art;
   const isLast = step === STEPS.length - 1;
   const isAllTime = year === 'all_time';
+
+  async function addManual() {
+    const url = manualUrl.trim();
+    if (!url || manualBusy || isAllTime) return;
+    setManualBusy(true);
+    setManualMsg(null);
+    try {
+      const res = await api.manualPlaylist(url, String(year));
+      setOwned(res.library.availableYears ?? []);
+      setManualMsg({ ok: `Added ${year} from your link 🎉` });
+      setManualUrl('');
+    } catch (err) {
+      const code = err.data?.error ?? 'manual_add_failed';
+      setManualMsg({ error: MANUAL_ERRORS[code] ?? 'Could not add that playlist.' });
+    } finally {
+      setManualBusy(false);
+    }
+  }
 
   const backRoom = readRoom();
   const goBack = () => navigate(backRoom ? `/room/${backRoom}` : '/');
@@ -353,8 +374,45 @@ export default function Setup() {
               </button>
             )}
           </div>
+
+          {/* Fallback for renamed/localized copies auto-detection misses. */}
+          <section className="card mt-4 p-4 text-left">
+            <p className="text-sm font-bold">Still not detected?</p>
+            <p className="mt-1 text-xs text-ink-dim">
+              Paste the link to your {year} copy (Spotify → the playlist → ⋯ →
+              Share → <b>Copy link to playlist</b>) and we'll add it directly as{' '}
+              <b>{year}</b>.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <input
+                value={manualUrl}
+                onChange={(e) => setManualUrl(e.target.value)}
+                placeholder="https://open.spotify.com/playlist/…"
+                className="min-w-0 flex-1 rounded-full bg-bg-raised px-4 py-2 text-sm placeholder:text-ink-dim focus:outline-none focus:ring-2 focus:ring-accent"
+              />
+              <button
+                onClick={addManual}
+                disabled={manualBusy || !manualUrl.trim()}
+                className="shrink-0 rounded-full bg-accent px-4 py-2 text-sm font-bold text-white transition active:scale-95 disabled:opacity-40"
+              >
+                {manualBusy ? 'Adding…' : `Add ${year}`}
+              </button>
+            </div>
+            {manualMsg?.ok && (
+              <p className="mt-2 text-sm font-bold text-good">{manualMsg.ok}</p>
+            )}
+            {manualMsg?.error && <p className="mt-2 text-sm text-bad">{manualMsg.error}</p>}
+          </section>
         </>
       )}
     </main>
   );
 }
+
+const MANUAL_ERRORS = {
+  invalid_url: "That doesn't look like a Spotify playlist link.",
+  invalid_period: 'Pick a year first.',
+  empty_or_unreadable:
+    "Couldn't read that playlist — paste a link to a copy YOU created (Spotify can't read its own Wrapped playlists).",
+  manual_add_failed: 'Could not add that playlist. Try again.',
+};

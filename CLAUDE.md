@@ -67,6 +67,21 @@ Phase 5 done so far:
 - Proven via a 7-assertion socket.io integration test (reconnect restores the
   round, Match-Up reveals when the hold-out disconnects, needsReauth surfaces);
   script deleted after.
+- **Dev test bots** (`rooms/bots.js`) — lets ONE human play a full game with no
+  second account (a room rejects duplicate Spotify accounts, and two identical
+  libraries would dedup to nothing). `store.addBot` builds a fake session +
+  player (`isBot`) with a synthetic distinct library covering every period.
+  `dev:addBots` socket event (host, lobby, `config.devMode` only). Bots auto-play:
+  `scheduleBotGuesses`/`scheduleBotSubmissions` in `game/socket.js` fire after
+  each round emit — random guess (roulette) / random valid bijection (match-up)
+  after a 0.7–2.6s delay, guarded by round index so stale timers no-op.
+  `leaveRoom` now hands host to the next *human* and deletes a room once no
+  humans remain. Client: dev-only "🤖 Add a test bot" button
+  (`import.meta.env.DEV`) + a 🤖 badge on bot players. **Limitation:** bot tracks
+  use synthetic ids, so the embed can't stream them — only the human's own songs
+  play real audio; everything else (guessing, timer, scoring, reveals, sounds,
+  animations, confetti) works fully. Proven via an 11-assertion socket.io test
+  (bots join, roulette + match-up both reach reveal via bot play); deleted after.
 
 **Verified live this session (real account, single player):** full OAuth now
 completes through the callback (not just to the consent screen) — the `/setup`
@@ -76,10 +91,16 @@ console. **Auto-detection of "(2)"-suffixed copies confirmed working** (e.g.
 pipeline is proven end-to-end in a real browser now.
 
 **Resume here — open items, in priority order:**
-1. **Live two-account playtest of the actual game** (roulette + match-up, incl.
-   embed/sounds/animations). Still not done — needs a *second* OAuth'd Spotify
-   account in a separate browser, and the human "Agree" click Claude can't do.
-   Drive: reconnect Spotify → create room → hand off Agree → second account joins.
+0. **Solo playtest is now possible via dev bots** (see the "Dev test bots"
+   bullet). Fastest way to exercise the real game in a browser: Home (connected
+   as dhruva kanna, OAuth verified) → Create room → tap **🤖 Add a test bot**
+   1–4× → pick mode/period → Start. Bots auto-play so rounds resolve. Not yet
+   *observed* end-to-end in the browser by Claude — a good first thing to do next
+   session (drive it, or hand it to the user).
+1. **Live two-account HUMAN playtest** — the only thing bots don't cover: real
+   simultaneous humans + working embeds for *other* players' songs. Needs a
+   *second* OAuth'd Spotify account in a separate browser and the human "Agree"
+   click Claude can't do. Lower priority now that bots exist.
 2. **Decision pending (asked, not answered): easier friend-testing setup.** Two
    options offered — (a) add `express.static` so the whole app serves from the
    single Node port (cleanest for a Cloudflare/ngrok tunnel + future deploy), or

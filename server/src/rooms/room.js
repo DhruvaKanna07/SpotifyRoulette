@@ -18,6 +18,7 @@ export const DEFAULT_SETTINGS = {
   period: 'all_time', // 'all_time' | <year number>
   rounds: 10,
   timerSec: 30, // Roulette only; Match-Up has no timer (submit-then-reveal).
+  unknown: 'player', // Roulette: which attribute to guess — 'player'|'song'|'rank'
 };
 
 // The periods a single player has data for: All Time is always present; each

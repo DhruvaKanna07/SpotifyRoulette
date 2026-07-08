@@ -88,9 +88,16 @@ function scheduleBotGuesses(io, room) {
     setTimeout(() => {
       const r = room.currentRound;
       if (!r || r.index !== idx || r.revealed || r.guesses.has(p.id)) return;
-      const others = room.players.filter((x) => x.id !== p.id);
-      const target = others[Math.floor(Math.random() * others.length)];
-      const res = recordGuess(room, p.id, target.id);
+      let guess;
+      if (r.unknown === 'song') {
+        guess = r.songOptions[Math.floor(Math.random() * r.songOptions.length)].trackId;
+      } else if (r.unknown === 'rank') {
+        guess = 1 + Math.floor(Math.random() * r.rankMax);
+      } else {
+        const others = room.players.filter((x) => x.id !== p.id);
+        guess = others[Math.floor(Math.random() * others.length)].id;
+      }
+      const res = recordGuess(room, p.id, guess);
       if (!res.ok) return;
       if (allGuessed(room)) doReveal(io, room);
       else emitRound(io, room);
@@ -174,10 +181,10 @@ export function attachGameHandlers(io, socket, session) {
     scheduleBotGuesses(io, room);
   });
 
-  socket.on('game:guess', async ({ guessPlayerId } = {}, ack) => {
+  socket.on('game:guess', async ({ guess } = {}, ack) => {
     const room = getRoom(session.roomCode);
     if (!room) return ack?.({ ok: false, error: 'not_in_room' });
-    const res = recordGuess(room, session.id, guessPlayerId);
+    const res = recordGuess(room, session.id, guess);
     if (!res.ok) return ack?.(res);
     ack?.({ ok: true });
     if (allGuessed(room)) doReveal(io, room);

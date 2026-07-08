@@ -22,18 +22,24 @@ function ScoreRow({ rank, player, meId, delta }) {
 
 export default function RevealView({ reveal, meId, isHost, onNext }) {
   const byId = new Map(reveal.scoreboard.map((p) => [p.id, p]));
+  const songById = new Map((reveal.songOptions ?? []).map((o) => [o.trackId, o]));
   const isLast = reveal.round >= reveal.totalRounds;
+  const mine = reveal.guesses.find((g) => g.guesserId === meId);
 
-  // Sound: a reveal chime, then a correct/wrong flourish for the viewer.
   useEffect(() => {
     sfx.reveal();
-    const mine = reveal.guesses.find((g) => g.guesserId === meId);
     if (!mine) return;
-    const t = setTimeout(() => (mine.correct ? sfx.correct() : sfx.wrong()), 260);
+    const good = mine.correct || mine.points > 0;
+    const t = setTimeout(() => (good ? sfx.correct() : sfx.wrong()), 260);
     return () => clearTimeout(t);
-  }, [reveal.index, meId]);
+  }, [reveal.index, meId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const myGuess = reveal.guesses.find((g) => g.guesserId === meId);
+  // How to describe what someone guessed, per mode.
+  const describeGuess = (g) => {
+    if (reveal.unknown === 'song') return songById.get(g.guess)?.name ?? '—';
+    if (reveal.unknown === 'rank') return `#${g.guess}`;
+    return byId.get(g.guess)?.displayName ?? '—';
+  };
 
   return (
     <main className="mx-auto max-w-md space-y-4 px-4 py-6">
@@ -44,12 +50,13 @@ export default function RevealView({ reveal, meId, isHost, onNext }) {
       <section
         key={reveal.index}
         className={`card flex animate-pop flex-col items-center gap-3 p-5 text-center ${
-          myGuess && !myGuess.correct ? 'animate-shake' : ''
+          mine && !mine.correct ? 'animate-shake' : ''
         }`}
       >
         {reveal.owner && <Avatar player={reveal.owner} size="lg" />}
         <p className="text-lg">
-          It was <span className="font-extrabold">{reveal.owner?.displayName}</span>'s song!
+          It was <span className="font-extrabold">{reveal.owner?.displayName}</span>'s{' '}
+          <span className="font-extrabold">{reveal.rankLabel}</span>
         </p>
         <div className="flex items-center gap-3">
           {reveal.track.albumArtUrl && (
@@ -57,9 +64,7 @@ export default function RevealView({ reveal, meId, isHost, onNext }) {
           )}
           <div className="text-left">
             <p className="font-bold leading-tight">{reveal.track.name}</p>
-            <p className="text-sm text-ink-dim">
-              {reveal.rankLabel} · {reveal.periodLabel}
-            </p>
+            <p className="text-sm text-ink-dim">{reveal.track.artists.join(', ')}</p>
           </div>
         </div>
         <div className="w-full">
@@ -75,19 +80,14 @@ export default function RevealView({ reveal, meId, isHost, onNext }) {
           <ul className="space-y-2">
             {reveal.guesses.map((g) => {
               const guesser = byId.get(g.guesserId);
-              const guessed = byId.get(g.guessPlayerId);
-              const pts = reveal.roundScores[g.guesserId] ?? 0;
               return (
                 <li key={g.guesserId} className="flex items-center gap-2 text-sm">
                   {guesser && <Avatar player={guesser} size="sm" />}
                   <span className="font-semibold">{guesser?.displayName}</span>
-                  <span className="text-ink-dim">guessed</span>
-                  {guessed && <Avatar player={guessed} size="sm" />}
-                  <span className="flex-1 truncate">{guessed?.displayName}</span>
+                  <span className="text-ink-dim">said</span>
+                  <span className="flex-1 truncate font-semibold">{describeGuess(g)}</span>
                   <span>{g.correct ? '✅' : '❌'}</span>
-                  {g.correct && pts > 0 && (
-                    <span className="font-bold text-good">+{pts}</span>
-                  )}
+                  {g.points > 0 && <span className="font-bold text-good">+{g.points}</span>}
                 </li>
               );
             })}

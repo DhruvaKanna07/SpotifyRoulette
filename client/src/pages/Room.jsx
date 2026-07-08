@@ -90,7 +90,7 @@ export default function Room() {
   }, [code, navigate]);
 
   const isHost = room?.hostPlayerId === meId;
-  const onGuess = (playerId) => getSocket().emit('game:guess', { guessPlayerId: playerId });
+  const onGuess = (guess) => getSocket().emit('game:guess', { guess });
   const onNext = () => getSocket().emit('game:next', {});
   const onMatchSubmit = (assignment) => getSocket().emit('matchup:submit', { assignment });
   const onMatchNext = () => getSocket().emit('matchup:next', {});

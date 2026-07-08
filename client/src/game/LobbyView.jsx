@@ -105,6 +105,12 @@ function Stepper({ label, value, min, max, step = 1, disabled, onChange }) {
   );
 }
 
+const UNKNOWN_HINTS = {
+  player: 'Song + rank are shown — guess whose song it is.',
+  song: 'The player + rank are shown — pick which of 4 songs is theirs.',
+  rank: "The player + song are shown — guess the song's rank (closer = more points).",
+};
+
 function Settings({ room, isHost, update }) {
   const { settings } = room;
   return (
@@ -138,6 +144,31 @@ function Settings({ room, isHost, update }) {
           </p>
         )}
       </div>
+
+      {settings.mode === 'roulette' && (
+        <div>
+          <p className="mb-2 text-sm text-ink-dim">Guess the…</p>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              ['player', '🧑 Player'],
+              ['song', '🎵 Song'],
+              ['rank', '#️⃣ Rank'],
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                disabled={!isHost}
+                onClick={() => update({ unknown: key })}
+                className={`rounded-xl px-2 py-2 text-sm font-bold transition ${
+                  settings.unknown === key ? 'bg-accent text-white' : 'bg-bg-raised text-ink-dim'
+                } disabled:opacity-60`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-ink-dim">{UNKNOWN_HINTS[settings.unknown]}</p>
+        </div>
+      )}
 
       {SHOW_PLAYLISTS && (
         <div>

@@ -151,6 +151,9 @@ export function updateSettings(room, patch) {
   if (next.mode !== 'roulette' && next.mode !== 'matchup') {
     next.mode = room.settings.mode;
   }
+  if (!['player', 'song', 'rank'].includes(next.unknown)) {
+    next.unknown = room.settings.unknown;
+  }
   room.settings = next;
   return room;
 }

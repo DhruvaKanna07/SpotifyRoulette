@@ -71,6 +71,54 @@ function doReveal(io, room) {
   io.to(room.code).emit('game:reveal', reveal);
 }
 
+// --- Test bots (dev): auto-play so a solo human can run a full game ---------
+
+function botDelay() {
+  return 700 + Math.random() * 1900; // feel human-ish, well under a 30s timer
+}
+
+// Each bot that isn't the round owner makes a random guess after a short delay.
+function scheduleBotGuesses(io, room) {
+  const round = room.currentRound;
+  if (!round) return;
+  const idx = round.index;
+  for (const p of room.players) {
+    if (!p.isBot || p.id === round.ownerId) continue;
+    setTimeout(() => {
+      const r = room.currentRound;
+      if (!r || r.index !== idx || r.revealed || r.guesses.has(p.id)) return;
+      const others = room.players.filter((x) => x.id !== p.id);
+      const target = others[Math.floor(Math.random() * others.length)];
+      const res = recordGuess(room, p.id, target.id);
+      if (!res.ok) return;
+      if (allGuessed(room)) doReveal(io, room);
+      else emitRound(io, room);
+    }, botDelay());
+  }
+}
+
+// Each bot submits a random valid (bijection) matching after a short delay.
+function scheduleBotSubmissions(io, room) {
+  const round = room.currentMatch;
+  if (!round) return;
+  const idx = round.index;
+  for (const p of room.players) {
+    if (!p.isBot || round.submitted.has(p.id)) continue;
+    setTimeout(() => {
+      const r = room.currentMatch;
+      if (!r || r.index !== idx || r.revealed || r.submitted.has(p.id)) return;
+      const cards = r.songs.map((s) => s.cardId);
+      const ids = room.players.map((x) => x.id).sort(() => Math.random() - 0.5);
+      const assignment = {};
+      cards.forEach((c, i) => (assignment[c] = ids[i]));
+      const res = recordSubmission(room, p.id, assignment);
+      if (!res.ok) return;
+      if (allSubmitted(room)) doMatchReveal(io, room);
+      else emitMatchRound(io, room);
+    }, botDelay());
+  }
+}
+
 // A player dropped mid-game. Since completion checks only count *connected*
 // players, a disconnect can be the event that finishes a round — re-evaluate so
 // the game never stalls waiting on someone who left. (Matters most for Match-Up,
@@ -113,6 +161,7 @@ export function attachGameHandlers(io, socket, session) {
       if (!match) return ack?.({ ok: false, error: 'no_drawable_ranks' });
       ack?.({ ok: true });
       await emitMatchRound(io, room); // no timer in Match-Up
+      scheduleBotSubmissions(io, room);
       return;
     }
 
@@ -121,6 +170,7 @@ export function attachGameHandlers(io, socket, session) {
     ack?.({ ok: true });
     await emitRound(io, room);
     startRoundTimer(io, room);
+    scheduleBotGuesses(io, room);
   });
 
   socket.on('game:guess', async ({ guessPlayerId } = {}, ack) => {
@@ -146,6 +196,7 @@ export function attachGameHandlers(io, socket, session) {
     } else {
       await emitRound(io, room);
       startRoundTimer(io, room);
+      scheduleBotGuesses(io, room);
     }
   });
 
@@ -178,8 +229,12 @@ export function attachGameHandlers(io, socket, session) {
 
     const { ended } = advanceMatch(room);
     ack?.({ ok: true, ended });
-    if (ended) io.to(room.code).emit('game:ended', serializeFinal(room));
-    else await emitMatchRound(io, room);
+    if (ended) {
+      io.to(room.code).emit('game:ended', serializeFinal(room));
+    } else {
+      await emitMatchRound(io, room);
+      scheduleBotSubmissions(io, room);
+    }
   });
 
   socket.on('game:playAgain', (_p, ack) => {

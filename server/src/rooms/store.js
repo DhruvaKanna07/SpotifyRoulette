@@ -1,5 +1,7 @@
 // In-memory room store (no DB in v1). Rooms disappear on restart, by design.
 import { DEFAULT_SETTINGS, AVATARS, MAX_PLAYERS } from './room.js';
+import { createSession } from '../sessions.js';
+import { botLibrary } from './bots.js';
 
 const rooms = new Map(); // code -> Room
 
@@ -94,6 +96,25 @@ export function joinRoom(code, session) {
   return { room };
 }
 
+// Dev-only: add an auto-playing test bot with its own distinct library so one
+// human can play a full game. Returns { player } or { error }.
+export function addBot(room) {
+  if (room.players.length >= MAX_PLAYERS) return { error: 'room_full' };
+  const seed = room.players.filter((p) => p.isBot).length;
+  // A bot's "session" mirrors a real one enough for makePlayer + serialization.
+  const session = {
+    spotify: { spotifyUserId: `bot-${seed}-${room.code}` },
+    library: botLibrary(seed),
+    roomCode: room.code,
+    isBot: true,
+  };
+  createSession(session); // assigns session.id and stores it
+  const player = makePlayer(session, nextAvatar(room));
+  player.isBot = true;
+  room.players.push(player);
+  return { player };
+}
+
 // Mark a player disconnected (presence). Empty rooms are cleaned up.
 export function markDisconnected(session) {
   const room = getRoom(session.roomCode);
@@ -109,13 +130,15 @@ export function leaveRoom(session) {
   room.players = room.players.filter((p) => p.id !== session.id);
   session.roomCode = null;
 
-  if (room.players.length === 0) {
+  // A room full of only bots (no humans left) is dead — clean it up.
+  const humans = room.players.filter((p) => !p.isBot);
+  if (humans.length === 0) {
     rooms.delete(room.code);
     return null;
   }
-  // If the host left, hand the crown to the next player.
+  // If the host left, hand the crown to the next HUMAN (never a bot).
   if (room.hostPlayerId === session.id) {
-    room.hostPlayerId = room.players[0].id;
+    room.hostPlayerId = humans[0].id;
   }
   return room;
 }

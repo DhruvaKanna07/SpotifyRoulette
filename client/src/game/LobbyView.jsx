@@ -18,6 +18,7 @@ function PlayerList({ room, meId }) {
             <Avatar player={p} />
             <span className="flex-1 truncate font-semibold">
               {p.displayName}
+              {p.isBot && <span className="text-ink-dim"> 🤖</span>}
               {p.id === meId && <span className="text-ink-dim"> (you)</span>}
             </span>
             {p.needsReauth && (
@@ -219,6 +220,12 @@ export default function LobbyView({ room, meId, onLeave }) {
     });
   }
 
+  function addBot() {
+    getSocket().emit('dev:addBots', { count: 1 }, (res) => {
+      if (!res?.ok) setError('Could not add a test bot.');
+    });
+  }
+
   function copyCode() {
     navigator.clipboard?.writeText(room.code).then(() => {
       setCopied(true);
@@ -272,6 +279,15 @@ export default function LobbyView({ room, meId, onLeave }) {
         Missing a year? Add your Wrapped playlists →
       </button>
       <Settings room={room} isHost={isHost} update={update} />
+
+      {import.meta.env.DEV && isHost && room.players.length < 5 && (
+        <button
+          onClick={addBot}
+          className="w-full rounded-full border border-dashed border-accent-2/50 bg-accent-2/10 px-4 py-2.5 text-sm font-bold text-accent-2 transition active:scale-95"
+        >
+          🤖 Add a test bot (dev only — no second account needed)
+        </button>
+      )}
 
       {isHost ? (
         <div className="space-y-2">

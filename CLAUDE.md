@@ -13,6 +13,37 @@ constraints are real and must not be "simplified" away.
 
 ## Current status (resume here)
 
+### 🚀 DEPLOYED & LIVE at https://spotifyroulette.com (verified working)
+
+Hosted on **Render** as a single always-on Node web service (Express + Socket.io
+serving the built React client from one port — NOT Vercel/serverless; the app
+needs a persistent process for WebSockets + in-memory rooms). Live login through
+real Spotify OAuth confirmed working on the domain by the owner.
+
+- **Prod serving:** `server/src/index.js` serves `client/dist` + SPA fallback
+  when a build exists (dev still uses the Vite proxy). `trust proxy` set for
+  Render's TLS terminator. Start script `start:prod` (root + server) runs
+  `node src/index.js` with **no `--env-file`** — Render injects env vars.
+- **`render.yaml`** blueprint: web service, `buildCommand: npm install
+  --include=dev && npm run build` (the `--include=dev` is REQUIRED — `NODE_ENV=
+  production` otherwise makes npm skip Vite/Tailwind devDeps and the build
+  fails), `startCommand: npm run start:prod`, health check `/api/health`.
+- **Env vars on Render:** `NODE_ENV=production`, `CLIENT_ORIGIN=https://
+  spotifyroulette.com`, `REDIRECT_URI=https://spotifyroulette.com/callback`,
+  `SPOTIFY_CLIENT_ID` (secret), `SESSION_SECRET` (Render-generated).
+- **DNS (Squarespace):** custom records `A @ → 216.24.57.1` and `CNAME www →
+  spotify-roulette-phqh.onrender.com`; the "Squarespace Defaults" preset
+  (parking A records + www CNAME + HTTPS record) removed. Email TXT
+  (SPF/DMARC/DKIM) + Domain Connect left intact. HTTPS auto-issued by Render.
+- **Spotify dashboard:** redirect URI `https://spotifyroulette.com/callback`
+  registered; friends' emails must be allowlisted under User Management (dev-mode
+  5-user cap still applies).
+- Full deploy runbook in **`DEPLOY.md`**.
+- **Gotchas:** Render free tier **sleeps after ~15 min idle** (~30s cold start) —
+  open the site early before a game or upgrade to Starter ($7/mo). In-memory
+  state means a redeploy or the sleep **wipes all rooms + logins** — don't
+  redeploy mid-game. Deploying updates = push to `main` (Render auto-builds).
+
 Built, tested, committed, and pushed to `main` (GitHub: DhruvaKanna07/SpotifyRoulette):
 - **Phase 1 — Solo data pipeline** ✅ (OAuth PKCE, top tracks + year playlists, debug screen)
 - **Phase 2 — Rooms & lobby** ✅ (join codes, presence, availability grid, host settings)

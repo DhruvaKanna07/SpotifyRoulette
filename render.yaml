@@ -14,7 +14,9 @@ services:
     plan: free # bump to "starter" ($7/mo) to avoid the free tier's cold-start sleep
     region: oregon # pick the region closest to your friends
     branch: main
-    buildCommand: npm install && npm run build
+    # NODE_ENV=production (set below) makes npm skip devDependencies, but Vite &
+    # Tailwind are devDeps needed to build the client — so force them in.
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npm run start:prod
     healthCheckPath: /api/health
     envVars:

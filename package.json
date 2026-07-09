@@ -13,7 +13,8 @@
     "dev:server": "npm run dev --workspace server",
     "dev:client": "npm run dev --workspace client",
     "build": "npm run build --workspace client",
-    "start": "npm run start --workspace server"
+    "start": "npm run start --workspace server",
+    "start:prod": "npm run start:prod --workspace server"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

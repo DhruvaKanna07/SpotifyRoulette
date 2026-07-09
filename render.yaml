@@ -1,0 +1,33 @@
+# Render Blueprint — deploys Song Roulette as a single always-on Node web
+# service (Express + Socket.io serving the built React client).
+#
+# Why a Web Service and not static/serverless: the game holds rooms + sessions
+# in memory and uses Socket.io (persistent WebSockets), so it needs one
+# long-lived process. See CLAUDE.md.
+#
+# First deploy: push this to GitHub, then in Render → New → Blueprint, point at
+# the repo. Set the secret env vars (marked sync:false) in the dashboard.
+services:
+  - type: web
+    name: spotify-roulette
+    runtime: node
+    plan: free # bump to "starter" ($7/mo) to avoid the free tier's cold-start sleep
+    region: oregon # pick the region closest to your friends
+    branch: main
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Public URL of the app. Update these two after you attach the custom
+      # domain in Render (they must match your real HTTPS origin).
+      - key: CLIENT_ORIGIN
+        value: https://spotifyroulette.com
+      - key: REDIRECT_URI
+        value: https://spotifyroulette.com/callback
+      # Secrets — set these in the Render dashboard, not in git.
+      - key: SPOTIFY_CLIENT_ID
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true # Render generates a strong random value once

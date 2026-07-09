@@ -6,7 +6,8 @@
   "main": "src/index.js",
   "scripts": {
     "dev": "node --watch --env-file=../.env src/index.js",
-    "start": "node --env-file=../.env src/index.js"
+    "start": "node --env-file=../.env src/index.js",
+    "start:prod": "node src/index.js"
   },
   "dependencies": {
     "cookie": "^1.0.2",
